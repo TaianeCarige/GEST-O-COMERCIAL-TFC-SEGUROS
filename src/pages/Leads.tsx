@@ -1,5 +1,5 @@
 import React, { useState } from 'react'
-import useAppStore, { Branch, Status, PolicyType } from '@/stores/useAppStore'
+import useAppStore, { Branch, Status, PolicyType, Lead } from '@/stores/useAppStore'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import {
   Table,
@@ -22,12 +22,10 @@ import {
   DropdownMenu,
   DropdownMenuContent,
   DropdownMenuItem,
-  DropdownMenuLabel,
-  DropdownMenuSeparator,
-  DropdownMenuTrigger,
   DropdownMenuSub,
   DropdownMenuSubContent,
   DropdownMenuSubTrigger,
+  DropdownMenuTrigger,
 } from '@/components/ui/dropdown-menu'
 import {
   Sheet,
@@ -39,28 +37,82 @@ import {
 import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
 import { Textarea } from '@/components/ui/textarea'
+import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs'
 import { useToast } from '@/hooks/use-toast'
+import {
+  Dialog,
+  DialogContent,
+  DialogHeader,
+  DialogTitle,
+  DialogFooter,
+  DialogTrigger,
+} from '@/components/ui/dialog'
 import {
   MoreHorizontal,
   Filter,
-  Megaphone,
   UserPlus,
   UserCircle,
   AlertTriangle,
-  Clock,
-  CalendarDays,
   History,
   Save,
+  Upload,
   Plus,
+  RefreshCw,
+  Sparkles,
+  CalendarDays,
 } from 'lucide-react'
 
+const SCRIPT_TEMPLATES = {
+  Saúde: [
+    'Somos especialistas em blindagem e gestão de benefícios corporativos de alto nível. Sabendo que a inflação médica esmaga as margens, desenhamos uma arquitetura de Saúde focada na retenção de talentos e redução de sinistralidade. Podemos agendar 15 min na próxima terça?',
+    'Atuamos como parceiros estratégicos na otimização de custos com saúde corporativa. Implementamos modelos preditivos de gestão de saúde. Tem agenda livre na quinta-feira à tarde para um bate-papo rápido?',
+  ],
+  Patrimonial: [
+    'Nossa consultoria é focada na continuidade de negócios e proteção do balanço financeiro. Realizamos uma varredura de exposição a riscos e blindagem jurídica. Gostaria de agendar 15 minutos para apresentar nosso modelo?',
+    'Somos especialistas na proteção de ativos críticos e mitigação de riscos empresariais. Garantimos que o seu balanço permaneça protegido mesmo nos piores cenários. Tem disponibilidade para uma conversa de 10 minutos?',
+  ],
+  Frota: [
+    'Somos especialistas em otimização de custo logístico e proteção de ativos corporativos. Implementamos proteção de ativos e gestão de frotas com assistência 24h. Podemos marcar um café virtual na terça-feira?',
+  ],
+}
+
 export default function Leads() {
-  const { leads, updateLeadConsultant, getConsultant, consultants, currentUser } = useAppStore()
+  const {
+    leads,
+    updateLeadConsultant,
+    getConsultant,
+    consultants,
+    currentUser,
+    gerentes1327,
+    addGerente1327,
+    importLeads,
+  } = useAppStore()
   const { toast } = useToast()
 
   const me = consultants.find((c) => c.id === currentUser)
   const isAgency = me?.role === 'Agência'
   const isManager = me?.role === 'Gestora' || isAgency
+
+  const [mainCategory, setMainCategory] = useState<'1327' | 'Corporate'>('1327')
+  const [gerenteTab, setGerenteTab] = useState<string>(gerentes1327[0]?.id || '')
+  const [newGerenteName, setNewGerenteName] = useState('')
+  const [isAddGerenteOpen, setIsAddGerenteOpen] = useState(false)
+
+  const [branchFilter, setBranchFilter] = useState<Branch | 'Todos'>('Todos')
+  const [selectedLeadId, setSelectedLeadId] = useState<string | null>(null)
+
+  const handleAddGerente = () => {
+    if (!newGerenteName.trim()) return
+    addGerente1327(newGerenteName)
+    setNewGerenteName('')
+    setIsAddGerenteOpen(false)
+    toast({ title: 'Gerente Adicionado', description: 'Nova aba de gerente criada com sucesso.' })
+  }
+
+  const handleImport = (gerenteId: string) => {
+    importLeads(gerenteId, mainCategory)
+    toast({ title: 'Planilha Importada', description: 'Leads carregados com sucesso.' })
+  }
 
   const visibleLeads = isAgency
     ? leads
@@ -72,21 +124,155 @@ export default function Leads() {
         )
       : leads.filter((l) => l.consultantId === currentUser)
 
-  const [branchFilter, setBranchFilter] = useState<Branch | 'Todos'>('Todos')
-  const [statusFilter, setStatusFilter] = useState<Status | 'Todos'>('Todos')
-  const [retentionFilter, setRetentionFilter] = useState(false)
-  const [selectedLeadId, setSelectedLeadId] = useState<string | null>(null)
+  const categorizedLeads = visibleLeads
+    .filter((l) => {
+      if (mainCategory === '1327') return l.category === '1327' && l.gerenteId === gerenteTab
+      return l.category === 'Corporate'
+    })
+    .filter((l) => {
+      if (branchFilter !== 'Todos' && l.branch !== branchFilter) return false
+      return true
+    })
 
-  const ninetyDaysAgo = new Date()
-  ninetyDaysAgo.setDate(ninetyDaysAgo.getDate() - 90)
+  return (
+    <div className="space-y-6">
+      <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
+        <div>
+          <h1 className="text-3xl font-bold tracking-tight">Leads & Clientes</h1>
+          <p className="text-muted-foreground mt-1">
+            Navegação hierárquica por categoria e gestor.
+          </p>
+        </div>
+        <div className="flex flex-wrap items-center gap-2">
+          <Select value={branchFilter} onValueChange={(val) => setBranchFilter(val as any)}>
+            <SelectTrigger className="w-[180px]">
+              <Filter className="w-4 h-4 mr-2 text-muted-foreground" />
+              <SelectValue placeholder="Ramo" />
+            </SelectTrigger>
+            <SelectContent>
+              <SelectItem value="Todos">Todos os Ramos</SelectItem>
+              <SelectItem value="Automóveis/Frotas">Automóveis/Frotas</SelectItem>
+              <SelectItem value="Saúde">Saúde</SelectItem>
+              <SelectItem value="Patrimonial">Patrimonial</SelectItem>
+              <SelectItem value="RC">RC</SelectItem>
+            </SelectContent>
+          </Select>
+        </div>
+      </div>
+
+      <Tabs
+        value={mainCategory}
+        onValueChange={(v) => setMainCategory(v as any)}
+        className="w-full space-y-6"
+      >
+        <TabsList className="bg-muted/50 p-1">
+          <TabsTrigger value="1327" className="px-8">
+            1327
+          </TabsTrigger>
+          <TabsTrigger value="Corporate" className="px-8">
+            Corporate
+          </TabsTrigger>
+        </TabsList>
+
+        <TabsContent value="1327" className="space-y-4">
+          <Tabs value={gerenteTab} onValueChange={setGerenteTab} className="w-full">
+            <div className="flex items-center justify-between gap-4 border-b pb-2 mb-4">
+              <TabsList className="bg-transparent h-auto p-0 justify-start w-full overflow-x-auto">
+                {gerentes1327.map((g) => (
+                  <TabsTrigger
+                    key={g.id}
+                    value={g.id}
+                    className="data-[state=active]:bg-background data-[state=active]:border-b-2 data-[state=active]:border-primary rounded-none px-4 py-2"
+                  >
+                    {g.name}
+                  </TabsTrigger>
+                ))}
+              </TabsList>
+
+              <Dialog open={isAddGerenteOpen} onOpenChange={setIsAddGerenteOpen}>
+                <DialogTrigger asChild>
+                  <Button variant="outline" size="sm" className="shrink-0">
+                    <Plus className="w-4 h-4 mr-2" /> Novo Gerente
+                  </Button>
+                </DialogTrigger>
+                <DialogContent>
+                  <DialogHeader>
+                    <DialogTitle>Adicionar Gerente</DialogTitle>
+                  </DialogHeader>
+                  <div className="py-4">
+                    <Label>Nome do Gerente</Label>
+                    <Input
+                      value={newGerenteName}
+                      onChange={(e) => setNewGerenteName(e.target.value)}
+                      placeholder="Ex: Ana Souza"
+                      className="mt-2"
+                    />
+                  </div>
+                  <DialogFooter>
+                    <Button onClick={handleAddGerente}>Salvar</Button>
+                  </DialogFooter>
+                </DialogContent>
+              </Dialog>
+            </div>
+
+            {gerentes1327.map((g) => (
+              <TabsContent key={g.id} value={g.id}>
+                <div className="flex justify-end mb-4">
+                  <Button variant="secondary" onClick={() => handleImport(g.id)}>
+                    <Upload className="w-4 h-4 mr-2" /> Importar Planilha
+                  </Button>
+                </div>
+                <LeadsTable
+                  leads={categorizedLeads}
+                  onSelect={setSelectedLeadId}
+                  isManager={isManager}
+                  consultants={consultants}
+                  updateLeadConsultant={updateLeadConsultant}
+                  getConsultant={getConsultant}
+                  me={me}
+                />
+              </TabsContent>
+            ))}
+          </Tabs>
+        </TabsContent>
+
+        <TabsContent value="Corporate" className="space-y-4">
+          <div className="flex justify-end mb-4">
+            <Button variant="secondary" onClick={() => handleImport('')}>
+              <Upload className="w-4 h-4 mr-2" /> Importar Planilha
+            </Button>
+          </div>
+          <LeadsTable
+            leads={categorizedLeads}
+            onSelect={setSelectedLeadId}
+            isManager={isManager}
+            consultants={consultants}
+            updateLeadConsultant={updateLeadConsultant}
+            getConsultant={getConsultant}
+            me={me}
+          />
+        </TabsContent>
+      </Tabs>
+
+      <Sheet open={!!selectedLeadId} onOpenChange={(open) => !open && setSelectedLeadId(null)}>
+        <SheetContent className="w-full sm:max-w-xl md:max-w-2xl overflow-y-auto">
+          {selectedLeadId && <LeadProfileSheet leadId={selectedLeadId} />}
+        </SheetContent>
+      </Sheet>
+    </div>
+  )
+}
+
+function LeadsTable({
+  leads,
+  onSelect,
+  isManager,
+  consultants,
+  updateLeadConsultant,
+  getConsultant,
+  me,
+}: any) {
   const now = new Date().getTime()
-
-  const filteredLeads = visibleLeads.filter((l) => {
-    if (branchFilter !== 'Todos' && l.branch !== branchFilter) return false
-    if (statusFilter !== 'Todos' && l.status !== statusFilter) return false
-    if (retentionFilter && new Date(l.lastContact) >= ninetyDaysAgo) return false
-    return true
-  })
 
   const getStatusColor = (status: Status) => {
     switch (status) {
@@ -106,6 +292,7 @@ export default function Leads() {
 
   const isPolicyExpiring = (policies: any[]) =>
     policies?.some((p) => {
+      if (!p.expirationDate) return false
       const diff = new Date(p.expirationDate).getTime() - now
       return diff > 0 && diff <= 30 * 24 * 60 * 60 * 1000
     })
@@ -115,80 +302,31 @@ export default function Leads() {
   }
 
   return (
-    <div className="space-y-6">
-      <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
-        <div>
-          <h1 className="text-3xl font-bold tracking-tight">Leads & Clientes</h1>
-          <p className="text-muted-foreground mt-1">
-            {isAgency
-              ? 'Visão consolidada da agência'
-              : isManager
-                ? 'Carteira da sua equipe'
-                : 'Sua carteira de clientes'}
-          </p>
-        </div>
-        <div className="flex flex-wrap items-center gap-2">
-          <Select value={branchFilter} onValueChange={(val) => setBranchFilter(val as any)}>
-            <SelectTrigger className="w-[180px]">
-              <Filter className="w-4 h-4 mr-2 text-muted-foreground" />
-              <SelectValue placeholder="Ramo" />
-            </SelectTrigger>
-            <SelectContent>
-              <SelectItem value="Todos">Todos os Ramos</SelectItem>
-              <SelectItem value="Automóveis/Frotas">Automóveis/Frotas</SelectItem>
-              <SelectItem value="Saúde">Saúde</SelectItem>
-              <SelectItem value="Patrimonial">Patrimonial</SelectItem>
-              <SelectItem value="RC">RC</SelectItem>
-            </SelectContent>
-          </Select>
-          <Button
-            variant={retentionFilter ? 'destructive' : 'outline'}
-            onClick={() => setRetentionFilter(!retentionFilter)}
-            className="transition-all"
-          >
-            Alerta: +90 Dias
-          </Button>
-        </div>
-      </div>
-
-      <Card>
-        <CardHeader className="pb-0">
-          <CardTitle>Lista de Contatos</CardTitle>
-        </CardHeader>
-        <CardContent className="pt-6">
-          <div className="rounded-md border overflow-x-auto">
-            <Table>
-              <TableHeader>
-                <TableRow>
-                  <TableHead>Nome do Cliente</TableHead>
-                  <TableHead>Ramo</TableHead>
-                  <TableHead>Status</TableHead>
-                  <TableHead>Último Contato</TableHead>
-                  {isManager && <TableHead>Consultor</TableHead>}
-                  <TableHead className="w-[80px]"></TableHead>
-                </TableRow>
-              </TableHeader>
-              <TableBody>
-                {filteredLeads.length > 0 ? (
-                  filteredLeads.map((lead) => (
+    <Card>
+      <CardHeader className="pb-0">
+        <CardTitle>Lista de Contatos</CardTitle>
+      </CardHeader>
+      <CardContent className="pt-6">
+        <div className="rounded-md border overflow-x-auto">
+          <Table>
+            <TableHeader>
+              <TableRow>
+                <TableHead>Nome do Cliente</TableHead>
+                <TableHead>Ramo</TableHead>
+                <TableHead>Status</TableHead>
+                <TableHead>Alertas</TableHead>
+                {isManager && <TableHead>Consultor</TableHead>}
+                <TableHead className="w-[80px]"></TableHead>
+              </TableRow>
+            </TableHeader>
+            <TableBody>
+              {leads.length > 0 ? (
+                leads.map((lead: Lead) => {
+                  const inactive = isLeadInactive(lead.lastContact)
+                  const expiring = isPolicyExpiring(lead.policies)
+                  return (
                     <TableRow key={lead.id}>
-                      <TableCell className="font-medium">
-                        <div className="flex items-center gap-2">
-                          {lead.name}
-                          {isPolicyExpiring(lead.policies) && (
-                            <AlertTriangle
-                              className="w-4 h-4 text-amber-500"
-                              title="Apólice expira em <30 dias"
-                            />
-                          )}
-                          {isLeadInactive(lead.lastContact) && (
-                            <Clock
-                              className="w-4 h-4 text-destructive"
-                              title="Sem contato há >90 dias"
-                            />
-                          )}
-                        </div>
-                      </TableCell>
+                      <TableCell className="font-medium">{lead.name}</TableCell>
                       <TableCell>{lead.branch}</TableCell>
                       <TableCell>
                         <Badge className={`border-none ${getStatusColor(lead.status)}`}>
@@ -196,7 +334,24 @@ export default function Leads() {
                         </Badge>
                       </TableCell>
                       <TableCell>
-                        {new Date(lead.lastContact).toLocaleDateString('pt-BR')}
+                        <div className="flex flex-col gap-1 items-start">
+                          {inactive && (
+                            <Badge variant="destructive" className="text-[10px]">
+                              REATIVAÇÃO
+                            </Badge>
+                          )}
+                          {expiring && (
+                            <Badge
+                              variant="outline"
+                              className="text-[10px] border-amber-500 text-amber-600"
+                            >
+                              VENCIMENTO PRÓXIMO
+                            </Badge>
+                          )}
+                          {!inactive && !expiring && (
+                            <span className="text-xs text-muted-foreground">-</span>
+                          )}
+                        </div>
                       </TableCell>
                       {isManager && <TableCell>{getConsultant(lead.consultantId)?.name}</TableCell>}
                       <TableCell>
@@ -207,9 +362,7 @@ export default function Leads() {
                             </Button>
                           </DropdownMenuTrigger>
                           <DropdownMenuContent align="end">
-                            <DropdownMenuLabel>Ações</DropdownMenuLabel>
-                            <DropdownMenuSeparator />
-                            <DropdownMenuItem onClick={() => setSelectedLeadId(lead.id)}>
+                            <DropdownMenuItem onClick={() => onSelect(lead.id)}>
                               <UserCircle className="w-4 h-4 mr-2" /> Perfil & Histórico
                             </DropdownMenuItem>
                             {isManager && (
@@ -220,13 +373,15 @@ export default function Leads() {
                                 <DropdownMenuSubContent>
                                   {consultants
                                     .filter(
-                                      (c) => isAgency || c.managerId === me?.id || c.id === me?.id,
+                                      (c: any) =>
+                                        c.role === 'Agência' ||
+                                        c.managerId === me?.id ||
+                                        c.id === me?.id,
                                     )
-                                    .map((c) => (
+                                    .map((c: any) => (
                                       <DropdownMenuItem
                                         key={c.id}
                                         onClick={() => updateLeadConsultant(lead.id, c.id)}
-                                        className={lead.consultantId === c.id ? 'bg-muted' : ''}
                                       >
                                         {c.name} {lead.consultantId === c.id && '(Atual)'}
                                       </DropdownMenuItem>
@@ -238,37 +393,45 @@ export default function Leads() {
                         </DropdownMenu>
                       </TableCell>
                     </TableRow>
-                  ))
-                ) : (
-                  <TableRow>
-                    <TableCell
-                      colSpan={isManager ? 6 : 5}
-                      className="h-24 text-center text-muted-foreground"
-                    >
-                      Nenhum cliente encontrado com os filtros atuais.
-                    </TableCell>
-                  </TableRow>
-                )}
-              </TableBody>
-            </Table>
-          </div>
-        </CardContent>
-      </Card>
-
-      <Sheet open={!!selectedLeadId} onOpenChange={(open) => !open && setSelectedLeadId(null)}>
-        <SheetContent className="w-full sm:max-w-xl md:max-w-2xl overflow-y-auto">
-          {selectedLeadId && <LeadProfileSheet leadId={selectedLeadId} />}
-        </SheetContent>
-      </Sheet>
-    </div>
+                  )
+                })
+              ) : (
+                <TableRow>
+                  <TableCell
+                    colSpan={isManager ? 6 : 5}
+                    className="h-24 text-center text-muted-foreground"
+                  >
+                    Nenhum cliente encontrado.
+                  </TableCell>
+                </TableRow>
+              )}
+            </TableBody>
+          </Table>
+        </div>
+      </CardContent>
+    </Card>
   )
 }
 
+const POLICY_TYPES = [
+  'Automóvel',
+  'Frota',
+  'Saúde',
+  'Dental',
+  'Vida Funcionários',
+  'Vida Individual',
+  'Responsabilidade Civil',
+  'Seguros Patrimoniais',
+  'Outros',
+]
+
 function LeadProfileSheet({ leadId }: { leadId: string }) {
-  const { leads, updateLeadDetails, addPolicy, addInteraction } = useAppStore()
+  const { leads, updateLeadDetails, updatePolicyDate, addInteraction, consultants, currentUser } =
+    useAppStore()
   const { toast } = useToast()
 
   const lead = leads.find((l) => l.id === leadId)
+  const me = consultants.find((c) => c.id === currentUser)
 
   const [details, setDetails] = useState({
     cnpj: lead?.cnpj || '',
@@ -277,15 +440,14 @@ function LeadProfileSheet({ leadId }: { leadId: string }) {
     contactPhone: lead?.contactPhone || '',
   })
 
-  const [newPolicy, setNewPolicy] = useState<{ type: PolicyType; expirationDate: string }>({
-    type: 'Outros',
-    expirationDate: '',
-  })
-
   const [interaction, setInteraction] = useState({
     note: '',
     newStatus: lead?.status || 'Prospecção',
   })
+
+  const [scriptType, setScriptType] = useState('Saúde')
+  const [generatedScript, setGeneratedScript] = useState('')
+  const [scriptVariant, setScriptVariant] = useState(0)
 
   if (!lead) return null
 
@@ -294,11 +456,8 @@ function LeadProfileSheet({ leadId }: { leadId: string }) {
     toast({ title: 'Perfil atualizado', description: 'Dados cadastrais salvos com sucesso.' })
   }
 
-  const handleAddPolicy = () => {
-    if (!newPolicy.expirationDate) return
-    addPolicy(leadId, newPolicy)
-    setNewPolicy({ type: 'Outros', expirationDate: '' })
-    toast({ title: 'Apólice adicionada', description: 'Vencimento registrado.' })
+  const handleUpdatePolicyDate = (type: PolicyType, date: string) => {
+    updatePolicyDate(leadId, type, date)
   }
 
   const handleAddInteraction = () => {
@@ -308,12 +467,26 @@ function LeadProfileSheet({ leadId }: { leadId: string }) {
     toast({ title: 'Interação salva', description: 'Histórico e status atualizados.' })
   }
 
+  const handleGenerateScript = () => {
+    const templates =
+      SCRIPT_TEMPLATES[scriptType as keyof typeof SCRIPT_TEMPLATES] || SCRIPT_TEMPLATES['Saúde']
+    const text = templates[scriptVariant % templates.length]
+    setGeneratedScript(
+      `Olá, ${details.contactName || 'Contato'}. Aqui é ${me?.name}, da TFC Seguros Corporativos.\n\n${text}`,
+    )
+    setScriptVariant((v) => v + 1)
+  }
+
+  const now = new Date().getTime()
+
   return (
     <div className="space-y-8 py-4">
       <SheetHeader>
         <SheetTitle className="text-2xl flex items-center gap-2">
           {lead.name}
-          <Badge variant="outline">{lead.branch}</Badge>
+          <Badge variant="outline">
+            {lead.category} {lead.category === '1327' ? '- Gerente' : ''}
+          </Badge>
         </SheetTitle>
         <SheetDescription>
           Gerencie dados cadastrais, apólices e histórico de interações.
@@ -338,7 +511,7 @@ function LeadProfileSheet({ leadId }: { leadId: string }) {
             <Input
               value={details.industry}
               onChange={(e) => setDetails({ ...details, industry: e.target.value })}
-              placeholder="Ex: Logística, Tecnologia..."
+              placeholder="Ex: Logística"
             />
           </div>
           <div className="space-y-2">
@@ -365,87 +538,97 @@ function LeadProfileSheet({ leadId }: { leadId: string }) {
 
       <div className="space-y-4 pt-4 border-t">
         <h3 className="text-lg font-semibold flex items-center gap-2">
-          <CalendarDays className="w-5 h-5 text-primary" /> Apólices & Vencimentos
+          <CalendarDays className="w-5 h-5 text-primary" /> Vencimentos de Apólices
         </h3>
-        {lead.policies && lead.policies.length > 0 && (
-          <div className="rounded-md border">
-            <Table>
-              <TableHeader>
-                <TableRow>
-                  <TableHead>Tipo de Seguro</TableHead>
-                  <TableHead>Vencimento</TableHead>
-                </TableRow>
-              </TableHeader>
-              <TableBody>
-                {lead.policies.map((p) => {
-                  const isExpiring =
-                    new Date(p.expirationDate).getTime() - new Date().getTime() <=
-                    30 * 24 * 60 * 60 * 1000
-                  return (
-                    <TableRow key={p.id}>
-                      <TableCell className="font-medium">{p.type}</TableCell>
-                      <TableCell className={isExpiring ? 'text-amber-500 font-bold' : ''}>
-                        {new Date(p.expirationDate).toLocaleDateString('pt-BR')}
-                        {isExpiring && <AlertTriangle className="w-4 h-4 inline ml-2" />}
-                      </TableCell>
-                    </TableRow>
-                  )
-                })}
-              </TableBody>
-            </Table>
-          </div>
-        )}
-        <div className="flex gap-2 items-end bg-muted/30 p-4 rounded-lg">
-          <div className="space-y-2 flex-1">
-            <Label>Nova Apólice (Ramo)</Label>
-            <Select
-              value={newPolicy.type}
-              onValueChange={(val: PolicyType) => setNewPolicy({ ...newPolicy, type: val })}
-            >
-              <SelectTrigger>
-                <SelectValue />
-              </SelectTrigger>
-              <SelectContent>
-                {[
-                  'Automóvel',
-                  'Frota',
-                  'Saúde',
-                  'Dental',
-                  'Vida Funcionários',
-                  'Vida Individual',
-                  'Responsabilidade Civil',
-                  'Seguros Patrimoniais',
-                  'Outros',
-                ].map((t) => (
-                  <SelectItem key={t} value={t}>
-                    {t}
-                  </SelectItem>
-                ))}
-              </SelectContent>
-            </Select>
-          </div>
-          <div className="space-y-2 flex-1">
-            <Label>Data de Vencimento</Label>
-            <Input
-              type="date"
-              value={newPolicy.expirationDate}
-              onChange={(e) => setNewPolicy({ ...newPolicy, expirationDate: e.target.value })}
-            />
-          </div>
-          <Button onClick={handleAddPolicy} variant="secondary">
-            <Plus className="w-4 h-4 mr-2" /> Adicionar
-          </Button>
+        <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 bg-muted/20 p-4 rounded-lg">
+          {POLICY_TYPES.map((type) => {
+            const policy = lead.policies?.find((p) => p.type === type)
+            const dateStr = policy?.expirationDate ? policy.expirationDate.split('T')[0] : ''
+            const isExpiring =
+              policy?.expirationDate &&
+              new Date(policy.expirationDate).getTime() - now <= 30 * 24 * 60 * 60 * 1000 &&
+              new Date(policy.expirationDate).getTime() - now > 0
+
+            return (
+              <div key={type} className="flex flex-col space-y-1">
+                <Label className="text-xs">{type}</Label>
+                <div className="relative flex items-center">
+                  <Input
+                    type="date"
+                    className={`h-9 ${isExpiring ? 'border-amber-500 bg-amber-500/5' : ''}`}
+                    value={dateStr}
+                    onChange={(e) =>
+                      handleUpdatePolicyDate(
+                        type as PolicyType,
+                        e.target.value ? new Date(e.target.value).toISOString() : '',
+                      )
+                    }
+                  />
+                  {isExpiring && (
+                    <AlertTriangle className="absolute right-2 w-4 h-4 text-amber-500 pointer-events-none" />
+                  )}
+                </div>
+              </div>
+            )
+          })}
         </div>
       </div>
 
       <div className="space-y-4 pt-4 border-t">
         <h3 className="text-lg font-semibold flex items-center gap-2">
-          <History className="w-5 h-5 text-primary" /> Histórico de Contatos
+          <Sparkles className="w-5 h-5 text-accent" /> Gerador de Scripts
+        </h3>
+        <div className="bg-accent/5 border border-accent/20 p-4 rounded-lg space-y-4">
+          <div className="flex gap-4 items-end">
+            <div className="space-y-2 flex-1">
+              <Label>Produto Alvo</Label>
+              <Select value={scriptType} onValueChange={setScriptType}>
+                <SelectTrigger>
+                  <SelectValue />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="Saúde">Saúde</SelectItem>
+                  <SelectItem value="Patrimonial">Patrimonial</SelectItem>
+                  <SelectItem value="Frota">Frota</SelectItem>
+                </SelectContent>
+              </Select>
+            </div>
+            <Button onClick={handleGenerateScript} variant="secondary">
+              <Sparkles className="w-4 h-4 mr-2" /> Gerar
+            </Button>
+          </div>
+          {generatedScript && (
+            <div className="space-y-2">
+              <div className="text-sm bg-background p-3 rounded border whitespace-pre-wrap">
+                {generatedScript}
+              </div>
+              <div className="flex justify-end gap-2">
+                <Button size="sm" variant="outline" onClick={handleGenerateScript}>
+                  <RefreshCw className="w-3 h-3 mr-1" /> Regerar
+                </Button>
+                <Button
+                  size="sm"
+                  onClick={() => {
+                    navigator.clipboard.writeText(generatedScript)
+                    toast({ title: 'Copiado' })
+                  }}
+                >
+                  Copiar
+                </Button>
+              </div>
+            </div>
+          )}
+        </div>
+      </div>
+
+      <div className="space-y-4 pt-4 border-t">
+        <h3 className="text-lg font-semibold flex items-center gap-2">
+          <History className="w-5 h-5 text-primary" /> Último Contato e Observações
         </h3>
 
         <div className="bg-primary/5 p-4 rounded-lg space-y-3">
           <div className="space-y-2">
-            <Label>Nova Interação (Pipeline)</Label>
+            <Label>Novo Status</Label>
             <Select
               value={interaction.newStatus}
               onValueChange={(val) => setInteraction({ ...interaction, newStatus: val })}
@@ -464,7 +647,7 @@ function LeadProfileSheet({ leadId }: { leadId: string }) {
           <div className="space-y-2">
             <Label>Observações</Label>
             <Textarea
-              placeholder="Detalhes da ligação, e-mail enviado, etc..."
+              placeholder="Detalhes da ligação..."
               value={interaction.note}
               onChange={(e) => setInteraction({ ...interaction, note: e.target.value })}
             />
@@ -477,18 +660,25 @@ function LeadProfileSheet({ leadId }: { leadId: string }) {
         </div>
 
         <div className="space-y-3 mt-4">
-          {lead.history?.map((h) => (
-            <div key={h.id} className="text-sm border p-3 rounded-md bg-card">
-              <div className="flex justify-between items-center mb-1 text-xs text-muted-foreground">
-                <span className="font-semibold text-foreground">{h.userName}</span>
-                <span>{new Date(h.date).toLocaleString('pt-BR')}</span>
-              </div>
-              <p className="mb-2">{h.note}</p>
-              <Badge variant="secondary" className="text-[10px]">
-                Alterado para: {h.newStatus}
-              </Badge>
-            </div>
-          ))}
+          {lead.history
+            ?.sort((a, b) => new Date(b.date).getTime() - new Date(a.date).getTime())
+            .map((h) => {
+              const dateObj = new Date(h.date)
+              const formattedDate = `${dateObj.toLocaleDateString('pt-BR')} ${dateObj.toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit' })}`
+              return (
+                <div key={h.id} className="text-sm border p-3 rounded-md bg-card">
+                  <div className="flex justify-between items-center mb-2">
+                    <Badge variant="secondary" className="text-[10px] font-mono">
+                      {h.userName} - {formattedDate}
+                    </Badge>
+                    <Badge variant="outline" className="text-[10px]">
+                      {h.newStatus}
+                    </Badge>
+                  </div>
+                  <p className="text-foreground/90">{h.note}</p>
+                </div>
+              )
+            })}
           {(!lead.history || lead.history.length === 0) && (
             <p className="text-sm text-muted-foreground text-center py-4">
               Nenhum histórico registrado.

@@ -56,6 +56,27 @@ export default function Reports() {
     })
     .sort((a, b) => b.proposalsVol - a.proposalsVol)
 
+  const { gerentes1327 } = useAppStore()
+
+  const gerentesStats = gerentes1327
+    .map((g) => {
+      const gLeads = leads.filter((l) => l.category === '1327' && l.gerenteId === g.id)
+      const advancedLeads = gLeads.filter((l) =>
+        ['Cotação', 'Fechamento', 'Fechado'].includes(l.status),
+      )
+      const conversionRate =
+        gLeads.length > 0 ? Math.round((advancedLeads.length / gLeads.length) * 100) : 0
+
+      return {
+        id: g.id,
+        name: g.name,
+        totalContacts: gLeads.length,
+        conversionRate,
+        proposalsVol: advancedLeads.reduce((acc, l) => acc + l.value, 0),
+      }
+    })
+    .sort((a, b) => b.proposalsVol - a.proposalsVol)
+
   // Volume of proposals by branch
   const visibleTeamIds = isAgency
     ? consultants.map((c) => c.id)
@@ -85,100 +106,157 @@ export default function Reports() {
       </div>
 
       <div className="grid gap-6 md:grid-cols-3">
-        <Card className="md:col-span-2">
-          <CardHeader>
-            <CardTitle className="flex items-center gap-2">
-              <TrendingUp className="h-5 w-5 text-primary" />
-              Taxa de Conversão & Volume de Leads
-            </CardTitle>
-            <CardDescription>
-              KPIs de avanço no funil (Prospecção → Cotação/Fechamento)
-            </CardDescription>
-          </CardHeader>
-          <CardContent>
-            <Table>
-              <TableHeader>
-                <TableRow>
-                  <TableHead>{isAgency ? 'Gestor / Unidade' : 'Consultor'}</TableHead>
-                  <TableHead className="text-center">Total Tratados</TableHead>
-                  <TableHead className="text-center">Tx. de Conversão</TableHead>
-                  <TableHead className="text-right">Volume (Cotação+)</TableHead>
-                </TableRow>
-              </TableHeader>
-              <TableBody>
-                {stats.map((c) => (
-                  <TableRow key={c.id}>
-                    <TableCell className="font-medium">
-                      <div className="flex items-center gap-2">
-                        {isAgency && <Building2 className="w-4 h-4 text-muted-foreground" />}
-                        {c.name}
-                      </div>
-                    </TableCell>
-                    <TableCell className="text-center">{c.totalContacts}</TableCell>
-                    <TableCell className="text-center">
-                      <Badge
-                        variant={
-                          c.conversionRate >= 30
-                            ? 'default'
-                            : c.conversionRate >= 15
-                              ? 'secondary'
-                              : 'destructive'
-                        }
-                      >
-                        {c.conversionRate}%
-                      </Badge>
-                    </TableCell>
-                    <TableCell className="text-right font-medium">
-                      {new Intl.NumberFormat('pt-BR', {
-                        style: 'currency',
-                        currency: 'BRL',
-                        maximumFractionDigits: 0,
-                      }).format(c.proposalsVol)}
-                    </TableCell>
+        <div className="md:col-span-2 space-y-6">
+          <Card>
+            <CardHeader>
+              <CardTitle className="flex items-center gap-2">
+                <TrendingUp className="h-5 w-5 text-primary" />
+                Performance 1327 (Por Gerente)
+              </CardTitle>
+              <CardDescription>KPIs de avanço no funil na categoria 1327</CardDescription>
+            </CardHeader>
+            <CardContent>
+              <Table>
+                <TableHeader>
+                  <TableRow>
+                    <TableHead>Gerente</TableHead>
+                    <TableHead className="text-center">Leads Tratados</TableHead>
+                    <TableHead className="text-center">Tx. de Conversão</TableHead>
+                    <TableHead className="text-right">Volume Cotação/Fechado</TableHead>
                   </TableRow>
-                ))}
-              </TableBody>
-            </Table>
-          </CardContent>
-        </Card>
+                </TableHeader>
+                <TableBody>
+                  {gerentesStats.map((g) => (
+                    <TableRow key={g.id}>
+                      <TableCell className="font-medium flex items-center gap-2">
+                        <Building2 className="w-4 h-4 text-muted-foreground" />
+                        {g.name}
+                      </TableCell>
+                      <TableCell className="text-center">{g.totalContacts}</TableCell>
+                      <TableCell className="text-center">
+                        <Badge
+                          variant={
+                            g.conversionRate >= 30
+                              ? 'default'
+                              : g.conversionRate >= 15
+                                ? 'secondary'
+                                : 'destructive'
+                          }
+                        >
+                          {g.conversionRate}%
+                        </Badge>
+                      </TableCell>
+                      <TableCell className="text-right font-medium">
+                        {new Intl.NumberFormat('pt-BR', {
+                          style: 'currency',
+                          currency: 'BRL',
+                          maximumFractionDigits: 0,
+                        }).format(g.proposalsVol)}
+                      </TableCell>
+                    </TableRow>
+                  ))}
+                </TableBody>
+              </Table>
+            </CardContent>
+          </Card>
 
-        <Card>
-          <CardHeader>
-            <CardTitle className="flex items-center gap-2">
-              <Award className="h-5 w-5 text-accent" />
-              Propostas por Ramo
-            </CardTitle>
-            <CardDescription>Volume financeiro em Cotação/Fechamento</CardDescription>
-          </CardHeader>
-          <CardContent>
-            <div className="space-y-4">
-              {sortedBranches.length > 0 ? (
-                sortedBranches.map(([branch, value], index) => (
-                  <div
-                    key={branch}
-                    className="flex items-center justify-between border-b pb-2 last:border-0 last:pb-0"
-                  >
-                    <div className="flex items-center gap-3">
-                      <span className="font-bold text-muted-foreground w-4">{index + 1}º</span>
-                      <span className="font-medium text-sm">{branch}</span>
+          <Card>
+            <CardHeader>
+              <CardTitle className="flex items-center gap-2">
+                <TrendingUp className="h-5 w-5 text-primary" />
+                Performance Geral (Equipe / Corporate)
+              </CardTitle>
+              <CardDescription>
+                KPIs consolidados de avanço (Prospecção → Cotação/Fechamento)
+              </CardDescription>
+            </CardHeader>
+            <CardContent>
+              <Table>
+                <TableHeader>
+                  <TableRow>
+                    <TableHead>{isAgency ? 'Gestor / Unidade' : 'Consultor'}</TableHead>
+                    <TableHead className="text-center">Total Tratados</TableHead>
+                    <TableHead className="text-center">Tx. de Conversão</TableHead>
+                    <TableHead className="text-right">Volume</TableHead>
+                  </TableRow>
+                </TableHeader>
+                <TableBody>
+                  {stats.map((c) => (
+                    <TableRow key={c.id}>
+                      <TableCell className="font-medium">
+                        <div className="flex items-center gap-2">
+                          {isAgency && <Building2 className="w-4 h-4 text-muted-foreground" />}
+                          {c.name}
+                        </div>
+                      </TableCell>
+                      <TableCell className="text-center">{c.totalContacts}</TableCell>
+                      <TableCell className="text-center">
+                        <Badge
+                          variant={
+                            c.conversionRate >= 30
+                              ? 'default'
+                              : c.conversionRate >= 15
+                                ? 'secondary'
+                                : 'destructive'
+                          }
+                        >
+                          {c.conversionRate}%
+                        </Badge>
+                      </TableCell>
+                      <TableCell className="text-right font-medium">
+                        {new Intl.NumberFormat('pt-BR', {
+                          style: 'currency',
+                          currency: 'BRL',
+                          maximumFractionDigits: 0,
+                        }).format(c.proposalsVol)}
+                      </TableCell>
+                    </TableRow>
+                  ))}
+                </TableBody>
+              </Table>
+            </CardContent>
+          </Card>
+        </div>
+
+        <div>
+          <Card>
+            <CardHeader>
+              <CardTitle className="flex items-center gap-2">
+                <Award className="h-5 w-5 text-accent" />
+                Propostas por Ramo
+              </CardTitle>
+              <CardDescription>Volume financeiro ativo</CardDescription>
+            </CardHeader>
+            <CardContent>
+              <div className="space-y-4">
+                {sortedBranches.length > 0 ? (
+                  sortedBranches.map(([branch, value], index) => (
+                    <div
+                      key={branch}
+                      className="flex items-center justify-between border-b pb-2 last:border-0 last:pb-0"
+                    >
+                      <div className="flex items-center gap-3">
+                        <span className="font-bold text-muted-foreground w-4">{index + 1}º</span>
+                        <span className="font-medium text-sm">{branch}</span>
+                      </div>
+                      <span className="font-semibold text-primary text-sm">
+                        {new Intl.NumberFormat('pt-BR', {
+                          style: 'currency',
+                          currency: 'BRL',
+                          maximumFractionDigits: 0,
+                        }).format(value)}
+                      </span>
                     </div>
-                    <span className="font-semibold text-primary text-sm">
-                      {new Intl.NumberFormat('pt-BR', {
-                        style: 'currency',
-                        currency: 'BRL',
-                        maximumFractionDigits: 0,
-                      }).format(value)}
-                    </span>
-                  </div>
-                ))
-              ) : (
-                <p className="text-muted-foreground text-sm text-center py-4">
-                  Nenhuma proposta ativa.
-                </p>
-              )}
-            </div>
-          </CardContent>
-        </Card>
+                  ))
+                ) : (
+                  <p className="text-muted-foreground text-sm text-center py-4">
+                    Nenhuma proposta ativa.
+                  </p>
+                )}
+              </div>
+            </CardContent>
+          </Card>
+        </div>
       </div>
     </div>
   )

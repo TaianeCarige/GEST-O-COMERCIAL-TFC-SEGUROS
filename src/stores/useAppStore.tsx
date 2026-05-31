@@ -76,6 +76,13 @@ export interface Lead {
   scheduledDate?: string
   policies: Policy[]
   history: Interaction[]
+  category?: '1327' | 'Corporate'
+  gerenteId?: string
+}
+
+export interface Gerente1327 {
+  id: string
+  name: string
 }
 
 export interface AvailableLead {
@@ -152,6 +159,8 @@ const MOCK_LEADS: Lead[] = [
   {
     id: 'l1',
     name: 'TechCorp SA',
+    category: '1327',
+    gerenteId: 'g1',
     cnpj: '12.345.678/0001-90',
     industry: 'Tecnologia',
     contactName: 'Ana Silva',
@@ -177,6 +186,7 @@ const MOCK_LEADS: Lead[] = [
   {
     id: 'l2',
     name: 'Logística Alfa',
+    category: 'Corporate',
     cnpj: '98.765.432/0001-10',
     industry: 'Logística',
     contactName: 'Carlos Souza',
@@ -192,6 +202,8 @@ const MOCK_LEADS: Lead[] = [
   {
     id: 'l3',
     name: 'Indústrias Sigma',
+    category: '1327',
+    gerenteId: 'g2',
     branch: 'Patrimonial',
     status: 'Fechamento',
     lastContact: getDaysAgo(2),
@@ -203,6 +215,7 @@ const MOCK_LEADS: Lead[] = [
   {
     id: 'l4',
     name: 'Construtora Beta',
+    category: 'Corporate',
     branch: 'RC',
     status: 'Prospecção',
     lastContact: getDaysAgo(110),
@@ -215,6 +228,8 @@ const MOCK_LEADS: Lead[] = [
   {
     id: 'l5',
     name: 'Clínica Sorriso',
+    category: '1327',
+    gerenteId: 'g1',
     branch: 'Odonto',
     status: 'Fechado',
     lastContact: getDaysAgo(10),
@@ -252,13 +267,17 @@ interface AppStore {
   leads: Lead[]
   availableLeads: AvailableLead[]
   consultants: Consultant[]
+  gerentes1327: Gerente1327[]
   updateLeadStatus: (id: string, status: Status) => void
   updateLeadConsultant: (id: string, consultantId: string) => void
   getConsultant: (id: string) => Consultant | undefined
   claimLead: (leadId: string) => void
   updateLeadDetails: (id: string, details: Partial<Lead>) => void
   addPolicy: (leadId: string, policy: Omit<Policy, 'id'>) => void
+  updatePolicyDate: (leadId: string, type: PolicyType, date: string) => void
   addInteraction: (leadId: string, note: string, newStatus: Status) => void
+  addGerente1327: (name: string) => void
+  importLeads: (gerenteId: string, category: '1327' | 'Corporate') => void
 }
 
 const AppContext = createContext<AppStore | undefined>(undefined)
@@ -268,6 +287,10 @@ export function AppStoreProvider({ children }: { children: ReactNode }) {
   const [leads, setLeads] = useState<Lead[]>(MOCK_LEADS)
   const [availableLeads, setAvailableLeads] = useState<AvailableLead[]>(MOCK_AVAILABLE_LEADS)
   const [consultants] = useState<Consultant[]>(MOCK_CONSULTANTS)
+  const [gerentes1327, setGerentes1327] = useState<Gerente1327[]>([
+    { id: 'g1', name: 'Gerente João' },
+    { id: 'g2', name: 'Gerente Maria' },
+  ])
 
   const updateLeadStatus = (id: string, status: Status) => {
     setLeads((prev) => prev.map((l) => (l.id === id ? { ...l, status } : l)))
@@ -315,6 +338,29 @@ export function AppStoreProvider({ children }: { children: ReactNode }) {
     )
   }
 
+  const updatePolicyDate = (leadId: string, type: PolicyType, date: string) => {
+    setLeads((prev) =>
+      prev.map((l) => {
+        if (l.id === leadId) {
+          const policies = l.policies || []
+          const existing = policies.find((p) => p.type === type)
+          if (existing) {
+            return {
+              ...l,
+              policies: policies.map((p) => (p.type === type ? { ...p, expirationDate: date } : p)),
+            }
+          } else {
+            return {
+              ...l,
+              policies: [...policies, { id: `p-${Date.now()}`, type, expirationDate: date }],
+            }
+          }
+        }
+        return l
+      }),
+    )
+  }
+
   const addInteraction = (leadId: string, note: string, newStatus: Status) => {
     const me = consultants.find((c) => c.id === currentUser)
     if (!me) return
@@ -341,6 +387,27 @@ export function AppStoreProvider({ children }: { children: ReactNode }) {
     )
   }
 
+  const addGerente1327 = (name: string) => {
+    setGerentes1327((prev) => [...prev, { id: `g-${Date.now()}`, name }])
+  }
+
+  const importLeads = (gerenteId: string, category: '1327' | 'Corporate') => {
+    const newLead: Lead = {
+      id: `imported-${Date.now()}`,
+      name: 'Lead Importado ' + Math.floor(Math.random() * 1000),
+      branch: 'Saúde',
+      status: 'Prospecção',
+      lastContact: new Date().toISOString(),
+      consultantId: currentUser,
+      value: 10000,
+      policies: [],
+      history: [],
+      category,
+      gerenteId,
+    }
+    setLeads((prev) => [...prev, newLead])
+  }
+
   return React.createElement(
     AppContext.Provider,
     {
@@ -350,13 +417,17 @@ export function AppStoreProvider({ children }: { children: ReactNode }) {
         leads,
         availableLeads,
         consultants,
+        gerentes1327,
         updateLeadStatus,
         updateLeadConsultant,
         getConsultant,
         claimLead,
         updateLeadDetails,
         addPolicy,
+        updatePolicyDate,
         addInteraction,
+        addGerente1327,
+        importLeads,
       },
     },
     children,
