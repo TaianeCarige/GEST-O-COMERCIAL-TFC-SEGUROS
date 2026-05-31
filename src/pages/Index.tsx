@@ -179,7 +179,8 @@ export default function Index() {
                   </div>
                   <Badge variant="destructive" className="text-[10px]">
                     {Math.floor(
-                      (now.getTime() - new Date(alert.lastContact).getTime()) / (1000 * 3600 * 24),
+                      (new Date().getTime() - new Date(alert.lastContact).getTime()) /
+                        (1000 * 3600 * 24),
                     )}{' '}
                     dias
                   </Badge>
