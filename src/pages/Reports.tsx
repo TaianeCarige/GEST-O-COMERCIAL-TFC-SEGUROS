@@ -14,13 +14,14 @@ import { TrendingUp, Award, Building2 } from 'lucide-react'
 import { Navigate } from 'react-router-dom'
 
 export default function Reports() {
-  const { consultants, leads, currentUser, gerentes1327 } = useAppStore()
+  const { consultants, leads, currentUser, gerentes1327, permissions } = useAppStore()
 
   const me = consultants.find((c) => c.id === currentUser)
+  const myPermissions = permissions[me?.role || 'Consultor']
   const isAgency = me?.role === 'Agência'
   const isManager = me?.role === 'Gestora' || isAgency
 
-  if (!isManager) {
+  if (!myPermissions.global_dashboard) {
     return <Navigate to="/" replace />
   }
 

@@ -43,23 +43,34 @@ import { Button } from '@/components/ui/button'
 
 export function AppSidebar() {
   const location = useLocation()
-  const { consultants, currentUser } = useAppStore()
+  const { consultants, currentUser, permissions } = useAppStore()
   const me = consultants.find((c) => c.id === currentUser)
-  const isManager = me?.role === 'Gestora' || me?.role === 'Agência'
+
+  const myPermissions = permissions[me?.role || 'Consultor']
 
   const navItems = [
     { name: 'Dashboard', path: '/', icon: LayoutDashboard, show: true },
-    { name: 'Leads & Clientes', path: '/leads', icon: Users, show: true },
+    { name: 'Leads & Clientes', path: '/leads', icon: Users, show: myPermissions.leads_tab },
     { name: 'Leads Disponíveis', path: '/available-leads', icon: Inbox, show: true },
     { name: 'Reativação (+90 dias)', path: '/reactivation', icon: History, show: true },
     { name: 'Metas & Evolução', path: '/goals', icon: Target, show: true },
     { name: 'Agenda', path: '/agenda', icon: CalendarDays, show: true },
     { name: 'Planejador Semanal', path: '/planner', icon: ListTodo, show: true },
-    { name: 'Prospecção B2B', path: '/prospecting', icon: Telescope, show: true },
+    {
+      name: 'Prospecção B2B',
+      path: '/prospecting',
+      icon: Telescope,
+      show: myPermissions.script_generator,
+    },
     { name: 'Especialista B2B', path: '/b2b-expert', icon: BriefcaseBusiness, show: true },
     { name: 'Mentor VIP', path: '/vip-mentor', icon: Sparkles, show: true },
-    { name: 'Relatórios', path: '/reports', icon: BarChart3, show: isManager },
-    { name: 'Gestão de Usuários', path: '/users', icon: ShieldCheck, show: isManager },
+    { name: 'Relatórios', path: '/reports', icon: BarChart3, show: myPermissions.global_dashboard },
+    {
+      name: 'Gestão de Usuários',
+      path: '/users',
+      icon: ShieldCheck,
+      show: myPermissions.user_management,
+    },
   ].filter((item) => item.show)
 
   return (

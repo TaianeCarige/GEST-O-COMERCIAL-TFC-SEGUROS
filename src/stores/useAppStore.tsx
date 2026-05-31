@@ -21,6 +21,17 @@ export type Status =
 
 export type Role = 'Agência' | 'Gestora' | 'Consultor'
 
+export type PermissionKey =
+  | 'leads_tab'
+  | 'tab_1327'
+  | 'tab_corporate'
+  | 'import_leads'
+  | 'global_dashboard'
+  | 'user_management'
+  | 'script_generator'
+
+export type RolePermissions = Record<Role, Record<PermissionKey, boolean>>
+
 export type PolicyType =
   | 'Automóvel'
   | 'Frota'
@@ -261,9 +272,41 @@ const MOCK_AVAILABLE_LEADS: AvailableLead[] = [
   },
 ]
 
+const DEFAULT_PERMISSIONS: RolePermissions = {
+  Agência: {
+    leads_tab: true,
+    tab_1327: true,
+    tab_corporate: true,
+    import_leads: true,
+    global_dashboard: true,
+    user_management: true,
+    script_generator: true,
+  },
+  Gestora: {
+    leads_tab: true,
+    tab_1327: true,
+    tab_corporate: true,
+    import_leads: true,
+    global_dashboard: true,
+    user_management: true,
+    script_generator: true,
+  },
+  Consultor: {
+    leads_tab: true,
+    tab_1327: true,
+    tab_corporate: true,
+    import_leads: false,
+    global_dashboard: false,
+    user_management: false,
+    script_generator: true,
+  },
+}
+
 interface AppStore {
   currentUser: string
   setCurrentUser: (id: string) => void
+  permissions: RolePermissions
+  updatePermission: (role: Role, key: PermissionKey, value: boolean) => void
   leads: Lead[]
   availableLeads: AvailableLead[]
   consultants: Consultant[]
@@ -286,6 +329,7 @@ const AppContext = createContext<AppStore | undefined>(undefined)
 
 export function AppStoreProvider({ children }: { children: ReactNode }) {
   const [currentUser, setCurrentUser] = useState<string>('1')
+  const [permissions, setPermissions] = useState<RolePermissions>(DEFAULT_PERMISSIONS)
   const [leads, setLeads] = useState<Lead[]>(MOCK_LEADS)
   const [availableLeads, setAvailableLeads] = useState<AvailableLead[]>(MOCK_AVAILABLE_LEADS)
   const [consultants, setConsultants] = useState<Consultant[]>(MOCK_CONSULTANTS)
@@ -418,12 +462,24 @@ export function AppStoreProvider({ children }: { children: ReactNode }) {
     console.log(`Reset password for consultant ${id}`)
   }
 
+  const updatePermission = (role: Role, key: PermissionKey, value: boolean) => {
+    setPermissions((prev) => ({
+      ...prev,
+      [role]: {
+        ...prev[role],
+        [key]: value,
+      },
+    }))
+  }
+
   return React.createElement(
     AppContext.Provider,
     {
       value: {
         currentUser,
         setCurrentUser,
+        permissions,
+        updatePermission,
         leads,
         availableLeads,
         consultants,

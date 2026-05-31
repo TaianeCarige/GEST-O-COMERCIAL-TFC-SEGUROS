@@ -62,6 +62,7 @@ import {
   CalendarDays,
   Copy,
 } from 'lucide-react'
+import { Navigate } from 'react-router-dom'
 
 const SCRIPT_TEMPLATES = {
   Saúde: {
@@ -106,14 +107,28 @@ export default function Leads() {
     gerentes1327,
     addGerente1327,
     importLeads,
+    permissions,
   } = useAppStore()
   const { toast } = useToast()
 
   const me = consultants.find((c) => c.id === currentUser)
+  const myPermissions = permissions[me?.role || 'Consultor']
   const isAgency = me?.role === 'Agência'
   const isManager = me?.role === 'Gestora' || isAgency
 
   const [mainCategory, setMainCategory] = useState<'1327' | 'Corporate'>('1327')
+
+  React.useEffect(() => {
+    if (!myPermissions.tab_1327 && myPermissions.tab_corporate && mainCategory === '1327') {
+      setMainCategory('Corporate')
+    } else if (
+      !myPermissions.tab_corporate &&
+      myPermissions.tab_1327 &&
+      mainCategory === 'Corporate'
+    ) {
+      setMainCategory('1327')
+    }
+  }, [myPermissions.tab_1327, myPermissions.tab_corporate, mainCategory])
   const [gerenteTab, setGerenteTab] = useState<string>(gerentes1327[0]?.id || '')
   const [newGerenteName, setNewGerenteName] = useState('')
   const [isAddGerenteOpen, setIsAddGerenteOpen] = useState(false)
@@ -154,6 +169,10 @@ export default function Leads() {
       return true
     })
 
+  if (!myPermissions.leads_tab) {
+    return <Navigate to="/" replace />
+  }
+
   return (
     <div className="space-y-6">
       <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
@@ -186,92 +205,104 @@ export default function Leads() {
         className="w-full space-y-6"
       >
         <TabsList className="bg-muted/50 p-1">
-          <TabsTrigger value="1327" className="px-8">
-            1327
-          </TabsTrigger>
-          <TabsTrigger value="Corporate" className="px-8">
-            Corporate
-          </TabsTrigger>
+          {myPermissions.tab_1327 && (
+            <TabsTrigger value="1327" className="px-8">
+              1327
+            </TabsTrigger>
+          )}
+          {myPermissions.tab_corporate && (
+            <TabsTrigger value="Corporate" className="px-8">
+              Corporate
+            </TabsTrigger>
+          )}
         </TabsList>
 
-        <TabsContent value="1327" className="space-y-4">
-          <Tabs value={gerenteTab} onValueChange={setGerenteTab} className="w-full">
-            <div className="flex items-center justify-between gap-4 border-b pb-2 mb-4">
-              <TabsList className="bg-transparent h-auto p-0 justify-start w-full overflow-x-auto">
-                {gerentes1327.map((g) => (
-                  <TabsTrigger
-                    key={g.id}
-                    value={g.id}
-                    className="data-[state=active]:bg-background data-[state=active]:border-b-2 data-[state=active]:border-primary rounded-none px-4 py-2"
-                  >
-                    {g.name}
-                  </TabsTrigger>
-                ))}
-              </TabsList>
+        {myPermissions.tab_1327 && (
+          <TabsContent value="1327" className="space-y-4">
+            <Tabs value={gerenteTab} onValueChange={setGerenteTab} className="w-full">
+              <div className="flex items-center justify-between gap-4 border-b pb-2 mb-4">
+                <TabsList className="bg-transparent h-auto p-0 justify-start w-full overflow-x-auto">
+                  {gerentes1327.map((g) => (
+                    <TabsTrigger
+                      key={g.id}
+                      value={g.id}
+                      className="data-[state=active]:bg-background data-[state=active]:border-b-2 data-[state=active]:border-primary rounded-none px-4 py-2"
+                    >
+                      {g.name}
+                    </TabsTrigger>
+                  ))}
+                </TabsList>
 
-              <Dialog open={isAddGerenteOpen} onOpenChange={setIsAddGerenteOpen}>
-                <DialogTrigger asChild>
-                  <Button variant="outline" size="sm" className="shrink-0">
-                    <Plus className="w-4 h-4 mr-2" /> Novo Gerente
-                  </Button>
-                </DialogTrigger>
-                <DialogContent>
-                  <DialogHeader>
-                    <DialogTitle>Adicionar Gerente</DialogTitle>
-                  </DialogHeader>
-                  <div className="py-4">
-                    <Label>Nome do Gerente</Label>
-                    <Input
-                      value={newGerenteName}
-                      onChange={(e) => setNewGerenteName(e.target.value)}
-                      placeholder="Ex: Ana Souza"
-                      className="mt-2"
-                    />
-                  </div>
-                  <DialogFooter>
-                    <Button onClick={handleAddGerente}>Salvar</Button>
-                  </DialogFooter>
-                </DialogContent>
-              </Dialog>
-            </div>
+                <Dialog open={isAddGerenteOpen} onOpenChange={setIsAddGerenteOpen}>
+                  <DialogTrigger asChild>
+                    <Button variant="outline" size="sm" className="shrink-0">
+                      <Plus className="w-4 h-4 mr-2" /> Novo Gerente
+                    </Button>
+                  </DialogTrigger>
+                  <DialogContent>
+                    <DialogHeader>
+                      <DialogTitle>Adicionar Gerente</DialogTitle>
+                    </DialogHeader>
+                    <div className="py-4">
+                      <Label>Nome do Gerente</Label>
+                      <Input
+                        value={newGerenteName}
+                        onChange={(e) => setNewGerenteName(e.target.value)}
+                        placeholder="Ex: Ana Souza"
+                        className="mt-2"
+                      />
+                    </div>
+                    <DialogFooter>
+                      <Button onClick={handleAddGerente}>Salvar</Button>
+                    </DialogFooter>
+                  </DialogContent>
+                </Dialog>
+              </div>
 
-            {gerentes1327.map((g) => (
-              <TabsContent key={g.id} value={g.id}>
-                <div className="flex justify-end mb-4">
-                  <Button variant="secondary" onClick={() => handleImport(g.id)}>
-                    <Upload className="w-4 h-4 mr-2" /> Importar Planilha
-                  </Button>
-                </div>
-                <LeadsTable
-                  leads={categorizedLeads}
-                  onSelect={setSelectedLeadId}
-                  isManager={isManager}
-                  consultants={consultants}
-                  updateLeadConsultant={updateLeadConsultant}
-                  getConsultant={getConsultant}
-                  me={me}
-                />
-              </TabsContent>
-            ))}
-          </Tabs>
-        </TabsContent>
+              {gerentes1327.map((g) => (
+                <TabsContent key={g.id} value={g.id}>
+                  {myPermissions.import_leads && (
+                    <div className="flex justify-end mb-4">
+                      <Button variant="secondary" onClick={() => handleImport(g.id)}>
+                        <Upload className="w-4 h-4 mr-2" /> Importar Planilha
+                      </Button>
+                    </div>
+                  )}
+                  <LeadsTable
+                    leads={categorizedLeads}
+                    onSelect={setSelectedLeadId}
+                    isManager={isManager}
+                    consultants={consultants}
+                    updateLeadConsultant={updateLeadConsultant}
+                    getConsultant={getConsultant}
+                    me={me}
+                  />
+                </TabsContent>
+              ))}
+            </Tabs>
+          </TabsContent>
+        )}
 
-        <TabsContent value="Corporate" className="space-y-4">
-          <div className="flex justify-end mb-4">
-            <Button variant="secondary" onClick={() => handleImport('')}>
-              <Upload className="w-4 h-4 mr-2" /> Importar Planilha
-            </Button>
-          </div>
-          <LeadsTable
-            leads={categorizedLeads}
-            onSelect={setSelectedLeadId}
-            isManager={isManager}
-            consultants={consultants}
-            updateLeadConsultant={updateLeadConsultant}
-            getConsultant={getConsultant}
-            me={me}
-          />
-        </TabsContent>
+        {myPermissions.tab_corporate && (
+          <TabsContent value="Corporate" className="space-y-4">
+            {myPermissions.import_leads && (
+              <div className="flex justify-end mb-4">
+                <Button variant="secondary" onClick={() => handleImport('')}>
+                  <Upload className="w-4 h-4 mr-2" /> Importar Planilha
+                </Button>
+              </div>
+            )}
+            <LeadsTable
+              leads={categorizedLeads}
+              onSelect={setSelectedLeadId}
+              isManager={isManager}
+              consultants={consultants}
+              updateLeadConsultant={updateLeadConsultant}
+              getConsultant={getConsultant}
+              me={me}
+            />
+          </TabsContent>
+        )}
       </Tabs>
 
       <Sheet open={!!selectedLeadId} onOpenChange={(open) => !open && setSelectedLeadId(null)}>

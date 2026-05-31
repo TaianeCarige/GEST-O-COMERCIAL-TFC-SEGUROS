@@ -13,6 +13,7 @@ import { Label } from '@/components/ui/label'
 import { FileText, Copy, Sparkles } from 'lucide-react'
 import { useToast } from '@/hooks/use-toast'
 import useAppStore from '@/stores/useAppStore'
+import { Navigate } from 'react-router-dom'
 
 const SCRIPT_TEMPLATES = {
   Saúde: {
@@ -48,8 +49,9 @@ const SCRIPT_TEMPLATES = {
 }
 
 export default function ScriptGenerator() {
-  const { consultants, currentUser } = useAppStore()
+  const { consultants, currentUser, permissions } = useAppStore()
   const me = consultants.find((c) => c.id === currentUser)
+  const myPermissions = permissions[me?.role || 'Consultor']
   const { toast } = useToast()
 
   const [product, setProduct] = useState('')
@@ -84,6 +86,10 @@ Como está sua disponibilidade para um call na próxima terça-feira pela manhã
       title: 'Script copiado!',
       description: 'O script foi copiado para a área de transferência.',
     })
+  }
+
+  if (!myPermissions.script_generator) {
+    return <Navigate to="/" replace />
   }
 
   return (
