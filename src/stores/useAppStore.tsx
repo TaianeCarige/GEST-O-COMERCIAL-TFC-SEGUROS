@@ -9,10 +9,13 @@ export type Status =
   | 'Perdido'
   | 'Objeção'
 
+export type Role = 'Gestora' | 'Consultor'
+
 export interface Consultant {
   id: string
   name: string
   color: string
+  role: Role
   callsGoal: number
   callsRealized: number
   visitsGoal: number
@@ -43,6 +46,7 @@ const MOCK_CONSULTANTS: Consultant[] = [
     id: '1',
     name: 'Taiane',
     color: 'hsl(var(--chart-1))',
+    role: 'Gestora',
     callsGoal: 100,
     callsRealized: 110,
     visitsGoal: 20,
@@ -54,6 +58,7 @@ const MOCK_CONSULTANTS: Consultant[] = [
     id: '2',
     name: 'Carlos',
     color: 'hsl(var(--chart-2))',
+    role: 'Consultor',
     callsGoal: 80,
     callsRealized: 85,
     visitsGoal: 15,
@@ -65,6 +70,7 @@ const MOCK_CONSULTANTS: Consultant[] = [
     id: '3',
     name: 'Mariana',
     color: 'hsl(var(--chart-3))',
+    role: 'Consultor',
     callsGoal: 90,
     callsRealized: 60,
     visitsGoal: 18,
@@ -154,6 +160,8 @@ const MOCK_LEADS: Lead[] = [
 ]
 
 interface AppStore {
+  currentUser: string
+  setCurrentUser: (id: string) => void
   leads: Lead[]
   consultants: Consultant[]
   updateLeadStatus: (id: string, status: Status) => void
@@ -163,6 +171,7 @@ interface AppStore {
 const AppContext = createContext<AppStore | undefined>(undefined)
 
 export function AppStoreProvider({ children }: { children: ReactNode }) {
+  const [currentUser, setCurrentUser] = useState<string>('1') // Default to Manager (Taiane)
   const [leads, setLeads] = useState<Lead[]>(MOCK_LEADS)
   const [consultants] = useState<Consultant[]>(MOCK_CONSULTANTS)
 
@@ -174,7 +183,7 @@ export function AppStoreProvider({ children }: { children: ReactNode }) {
 
   return React.createElement(
     AppContext.Provider,
-    { value: { leads, consultants, updateLeadStatus, getConsultant } },
+    { value: { currentUser, setCurrentUser, leads, consultants, updateLeadStatus, getConsultant } },
     children,
   )
 }

@@ -14,9 +14,16 @@ import { Briefcase } from 'lucide-react'
 
 export default function Agenda() {
   const navigate = useNavigate()
-  const { leads, consultants } = useAppStore()
+  const { leads, consultants, currentUser } = useAppStore()
   const [selectedEvent, setSelectedEvent] = useState<Lead | null>(null)
   const [dialogOpen, setDialogOpen] = useState(false)
+
+  const me = consultants.find((c) => c.id === currentUser)
+  const isManager = me?.role === 'Gestora'
+  const visibleLeads = isManager ? leads : leads.filter((l) => l.consultantId === currentUser)
+  const visibleConsultants = isManager
+    ? consultants
+    : consultants.filter((c) => c.id === currentUser)
 
   // Generate a simple calendar grid for the current month
   const today = new Date()
@@ -39,7 +46,7 @@ export default function Agenda() {
 
   const getEventsForDate = (dateStr: string | null) => {
     if (!dateStr) return []
-    return leads.filter((l) => l.scheduledDate && l.scheduledDate.startsWith(dateStr))
+    return visibleLeads.filter((l) => l.scheduledDate && l.scheduledDate.startsWith(dateStr))
   }
 
   const handleEventClick = (lead: Lead) => {
@@ -50,7 +57,16 @@ export default function Agenda() {
   return (
     <div className="space-y-6 h-full flex flex-col">
       <div className="flex items-center justify-between">
-        <h1 className="text-3xl font-bold tracking-tight">Agenda Compartilhada</h1>
+        <div>
+          <h1 className="text-3xl font-bold tracking-tight">
+            Agenda {isManager ? 'Compartilhada' : 'Pessoal'}
+          </h1>
+          <p className="text-muted-foreground mt-1">
+            {isManager
+              ? 'Visão consolidada dos compromissos da equipe'
+              : 'Seus compromissos e visitas'}
+          </p>
+        </div>
       </div>
 
       <Card className="flex-1 flex flex-col min-h-[600px]">
@@ -59,10 +75,9 @@ export default function Agenda() {
             <CardTitle>
               {today.toLocaleString('pt-BR', { month: 'long', year: 'numeric' }).toUpperCase()}
             </CardTitle>
-            <CardDescription>Visão geral de compromissos da equipe comercial</CardDescription>
           </div>
           <div className="flex gap-4">
-            {consultants.map((c) => (
+            {visibleConsultants.map((c) => (
               <div key={c.id} className="flex items-center gap-2 text-sm">
                 <div className="w-3 h-3 rounded-full" style={{ backgroundColor: c.color }}></div>
                 {c.name}
@@ -171,7 +186,7 @@ export default function Agenda() {
                         navigate(`/b2b-expert?sector=${encodeURIComponent(selectedEvent.branch)}`)
                       }}
                     >
-                      Prepare-se com o Expert de Inteligência B2B para esta reunião
+                      Prepare-se com o Expert de Inteligência B2B
                     </Button>
                   </div>
                 </div>

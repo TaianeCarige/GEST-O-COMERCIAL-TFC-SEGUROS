@@ -38,8 +38,12 @@ import { useToast } from '@/hooks/use-toast'
 import { MoreHorizontal, Filter, Megaphone, HelpCircle } from 'lucide-react'
 
 export default function Leads() {
-  const { leads, updateLeadStatus, getConsultant } = useAppStore()
+  const { leads, updateLeadStatus, getConsultant, consultants, currentUser } = useAppStore()
   const { toast } = useToast()
+
+  const me = consultants.find((c) => c.id === currentUser)
+  const isManager = me?.role === 'Gestora'
+  const visibleLeads = isManager ? leads : leads.filter((l) => l.consultantId === currentUser)
 
   const [branchFilter, setBranchFilter] = useState<Branch | 'Todos'>('Todos')
   const [statusFilter, setStatusFilter] = useState<Status | 'Todos'>('Todos')
@@ -52,7 +56,7 @@ export default function Leads() {
   const ninetyDaysAgo = new Date()
   ninetyDaysAgo.setDate(ninetyDaysAgo.getDate() - 90)
 
-  const filteredLeads = leads.filter((l) => {
+  const filteredLeads = visibleLeads.filter((l) => {
     if (branchFilter !== 'Todos' && l.branch !== branchFilter) return false
     if (statusFilter !== 'Todos' && l.status !== statusFilter) return false
     if (retentionFilter && new Date(l.lastContact) >= ninetyDaysAgo) return false
@@ -100,7 +104,12 @@ export default function Leads() {
   return (
     <div className="space-y-6">
       <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
-        <h1 className="text-3xl font-bold tracking-tight">Leads & Clientes</h1>
+        <div>
+          <h1 className="text-3xl font-bold tracking-tight">Leads & Clientes</h1>
+          <p className="text-muted-foreground mt-1">
+            {isManager ? 'Carteira consolidada da corretora' : 'Sua carteira de clientes'}
+          </p>
+        </div>
         <div className="flex flex-wrap items-center gap-2">
           <Select value={branchFilter} onValueChange={(val) => setBranchFilter(val as any)}>
             <SelectTrigger className="w-[180px]">
@@ -142,7 +151,7 @@ export default function Leads() {
             Filtro: +90 Dias
           </Button>
 
-          {retentionFilter && filteredLeads.length > 0 && (
+          {retentionFilter && filteredLeads.length > 0 && isManager && (
             <Button
               onClick={handleGenerateReactivation}
               className="bg-destructive text-destructive-foreground hover:bg-destructive/90 animate-fade-in"
@@ -166,7 +175,7 @@ export default function Leads() {
                   <TableHead>Ramo</TableHead>
                   <TableHead>Status</TableHead>
                   <TableHead>Último Contato</TableHead>
-                  <TableHead>Consultor</TableHead>
+                  {isManager && <TableHead>Consultor</TableHead>}
                   <TableHead className="w-[80px]"></TableHead>
                 </TableRow>
               </TableHeader>
@@ -189,7 +198,7 @@ export default function Leads() {
                           </span>
                         )}
                       </TableCell>
-                      <TableCell>{getConsultant(lead.consultantId)?.name}</TableCell>
+                      {isManager && <TableCell>{getConsultant(lead.consultantId)?.name}</TableCell>}
                       <TableCell>
                         <DropdownMenu>
                           <DropdownMenuTrigger asChild>
@@ -221,7 +230,10 @@ export default function Leads() {
                   ))
                 ) : (
                   <TableRow>
-                    <TableCell colSpan={6} className="h-24 text-center text-muted-foreground">
+                    <TableCell
+                      colSpan={isManager ? 6 : 5}
+                      className="h-24 text-center text-muted-foreground"
+                    >
                       Nenhum cliente encontrado com os filtros atuais.
                     </TableCell>
                   </TableRow>

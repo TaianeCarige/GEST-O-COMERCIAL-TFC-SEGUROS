@@ -15,14 +15,18 @@ import { useToast } from '@/hooks/use-toast'
 import { Copy, CalendarClock, PhoneOutgoing } from 'lucide-react'
 
 export default function Planner() {
-  const { leads, getConsultant } = useAppStore()
+  const { leads, getConsultant, consultants, currentUser } = useAppStore()
   const { toast } = useToast()
+
+  const me = consultants.find((c) => c.id === currentUser)
+  const isManager = me?.role === 'Gestora'
+  const visibleLeads = isManager ? leads : leads.filter((l) => l.consultantId === currentUser)
 
   // Definition for Planner: Proximity to 90 days (e.g. > 75 days) or Pending follow-ups
   const thresholdDate = new Date()
   thresholdDate.setDate(thresholdDate.getDate() - 75)
 
-  const plannerLeads = leads
+  const plannerLeads = visibleLeads
     .filter(
       (l) =>
         new Date(l.lastContact) < thresholdDate && l.status !== 'Fechado' && l.status !== 'Perdido',
@@ -74,7 +78,7 @@ export default function Planner() {
                   <TableRow>
                     <TableHead>Prioridade</TableHead>
                     <TableHead>Cliente</TableHead>
-                    <TableHead>Consultor</TableHead>
+                    {isManager && <TableHead>Consultor</TableHead>}
                     <TableHead className="text-right">Dias Inativo</TableHead>
                   </TableRow>
                 </TableHeader>
@@ -101,7 +105,9 @@ export default function Planner() {
                             <span className="font-medium block">{lead.name}</span>
                             <span className="text-xs text-muted-foreground">{lead.branch}</span>
                           </TableCell>
-                          <TableCell>{getConsultant(lead.consultantId)?.name}</TableCell>
+                          {isManager && (
+                            <TableCell>{getConsultant(lead.consultantId)?.name}</TableCell>
+                          )}
                           <TableCell className="text-right font-medium">
                             <span className={isCritical ? 'text-destructive' : ''}>{days}</span>
                           </TableCell>
@@ -110,7 +116,10 @@ export default function Planner() {
                     })
                   ) : (
                     <TableRow>
-                      <TableCell colSpan={4} className="text-center h-24 text-muted-foreground">
+                      <TableCell
+                        colSpan={isManager ? 4 : 3}
+                        className="text-center h-24 text-muted-foreground"
+                      >
                         Nenhum cliente na fila de alerta. Ótimo trabalho de retenção!
                       </TableCell>
                     </TableRow>

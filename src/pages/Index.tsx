@@ -24,30 +24,41 @@ import { DollarSign, Clock, AlertTriangle, Briefcase, ChevronRight } from 'lucid
 import { Link } from 'react-router-dom'
 
 export default function Index() {
-  const { leads, consultants, getConsultant } = useAppStore()
+  const { leads, consultants, currentUser, getConsultant } = useAppStore()
   const [briefingOpen, setBriefingOpen] = useState(false)
   const [selectedLead, setSelectedLead] = useState<string>('')
 
-  const totalSales = leads
+  const me = getConsultant(currentUser)
+  const isManager = me?.role === 'Gestora'
+
+  const visibleLeads = isManager ? leads : leads.filter((l) => l.consultantId === currentUser)
+  const visibleConsultants = isManager
+    ? consultants
+    : consultants.filter((c) => c.id === currentUser)
+
+  const totalSales = visibleLeads
     .filter((l) => l.status === 'Fechado')
     .reduce((sum, l) => sum + l.value, 0)
-  const pendingVisitsCount = leads.filter(
+
+  const pendingVisitsCount = visibleLeads.filter(
     (l) => l.status === 'Visita Pendente' || l.status === 'Agendado',
   ).length
 
   const ninetyDaysAgo = new Date()
   ninetyDaysAgo.setDate(ninetyDaysAgo.getDate() - 90)
-  const retentionAlerts = leads.filter((l) => new Date(l.lastContact) < ninetyDaysAgo)
+  const retentionAlerts = visibleLeads.filter((l) => new Date(l.lastContact) < ninetyDaysAgo)
 
   const todayStr = new Date().toISOString().split('T')[0]
-  const todayVisits = leads.filter((l) => l.scheduledDate && l.scheduledDate.startsWith(todayStr))
+  const todayVisits = visibleLeads.filter(
+    (l) => l.scheduledDate && l.scheduledDate.startsWith(todayStr),
+  )
 
   const handleBriefing = (leadName: string) => {
     setSelectedLead(leadName)
     setBriefingOpen(true)
   }
 
-  const chartData = consultants.map((c) => ({
+  const chartData = visibleConsultants.map((c) => ({
     name: c.name,
     'Ligações Realizadas': c.callsRealized,
     'Meta Ligações': c.callsGoal,
@@ -65,7 +76,12 @@ export default function Index() {
   return (
     <div className="space-y-6">
       <div className="flex items-center justify-between">
-        <h1 className="text-3xl font-bold tracking-tight">Dashboard Comercial</h1>
+        <div>
+          <h1 className="text-3xl font-bold tracking-tight">Dashboard Comercial</h1>
+          <p className="text-muted-foreground mt-1">
+            Visualização de {isManager ? 'toda a equipe' : 'sua carteira pessoal'}
+          </p>
+        </div>
       </div>
 
       <div className="grid gap-4 md:grid-cols-3">
@@ -111,7 +127,7 @@ export default function Index() {
         <Card className="md:col-span-4">
           <CardHeader>
             <CardTitle>Clientes para Visitar Hoje</CardTitle>
-            <CardDescription>Prioridade máxima para o time de consultores.</CardDescription>
+            <CardDescription>Prioridade máxima para o time comercial.</CardDescription>
           </CardHeader>
           <CardContent>
             {todayVisits.length > 0 ? (
@@ -119,7 +135,7 @@ export default function Index() {
                 <TableHeader>
                   <TableRow>
                     <TableHead>Cliente</TableHead>
-                    <TableHead>Consultor</TableHead>
+                    {isManager && <TableHead>Consultor</TableHead>}
                     <TableHead>Status</TableHead>
                     <TableHead className="text-right">Ação</TableHead>
                   </TableRow>
@@ -128,7 +144,7 @@ export default function Index() {
                   {todayVisits.map((lead) => (
                     <TableRow key={lead.id}>
                       <TableCell className="font-medium">{lead.name}</TableCell>
-                      <TableCell>{getConsultant(lead.consultantId)?.name}</TableCell>
+                      {isManager && <TableCell>{getConsultant(lead.consultantId)?.name}</TableCell>}
                       <TableCell>
                         <Badge variant={lead.status === 'Agendado' ? 'default' : 'secondary'}>
                           {lead.status}
@@ -146,7 +162,7 @@ export default function Index() {
             ) : (
               <div className="text-center py-10 text-muted-foreground flex flex-col items-center">
                 <Briefcase className="h-10 w-10 mb-3 opacity-20" />
-                <p>Não há visitas agendadas para hoje.</p>
+                <p>Não há visitas agendadas para hoje nesta visão.</p>
               </div>
             )}
           </CardContent>
@@ -174,7 +190,8 @@ export default function Index() {
                   <div>
                     <p className="font-medium text-sm">{alert.name}</p>
                     <p className="text-xs text-muted-foreground">
-                      {alert.branch} • Consultor: {getConsultant(alert.consultantId)?.name}
+                      {alert.branch}{' '}
+                      {isManager && `• Consultor: ${getConsultant(alert.consultantId)?.name}`}
                     </p>
                   </div>
                   <Badge variant="destructive" className="text-[10px]">
@@ -199,7 +216,7 @@ export default function Index() {
       <Card>
         <CardHeader>
           <CardTitle>Desempenho de Atividades vs Metas</CardTitle>
-          <CardDescription>Acompanhamento de ligações e visitas por consultor</CardDescription>
+          <CardDescription>Acompanhamento de ligações e visitas</CardDescription>
         </CardHeader>
         <CardContent>
           <ChartContainer config={chartConfig} className="h-[350px] w-full">
@@ -255,7 +272,9 @@ export default function Index() {
             </p>
           </div>
           <div className="flex justify-end">
-            <Button onClick={() => setBriefingOpen(false)}>Entendido</Button>
+            <Button asChild>
+              <Link to={`/b2b-expert?sector=${encodeURIComponent('Saúde')}`}>Acessar Expert</Link>
+            </Button>
           </div>
         </DialogContent>
       </Dialog>

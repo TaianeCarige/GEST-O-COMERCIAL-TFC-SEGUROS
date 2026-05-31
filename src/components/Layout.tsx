@@ -1,4 +1,5 @@
 import { Outlet, Link, useLocation } from 'react-router-dom'
+import useAppStore from '@/stores/useAppStore'
 import {
   SidebarProvider,
   Sidebar,
@@ -10,6 +11,14 @@ import {
   SidebarTrigger,
 } from '@/components/ui/sidebar'
 import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuLabel,
+  DropdownMenuSeparator,
+  DropdownMenuTrigger,
+} from '@/components/ui/dropdown-menu'
+import {
   LayoutDashboard,
   Users,
   Target,
@@ -20,22 +29,29 @@ import {
   UserCircle,
   Plus,
   BriefcaseBusiness,
+  Telescope,
+  BarChart3,
+  ChevronDown,
 } from 'lucide-react'
 import { Input } from '@/components/ui/input'
 import { Button } from '@/components/ui/button'
-import { cn } from '@/lib/utils'
 
 export function AppSidebar() {
   const location = useLocation()
+  const { consultants, currentUser } = useAppStore()
+  const me = consultants.find((c) => c.id === currentUser)
+  const isManager = me?.role === 'Gestora'
 
   const navItems = [
-    { name: 'Dashboard', path: '/', icon: LayoutDashboard },
-    { name: 'Leads & Clientes', path: '/leads', icon: Users },
-    { name: 'Metas & Evolução', path: '/goals', icon: Target },
-    { name: 'Agenda Compartilhada', path: '/agenda', icon: CalendarDays },
-    { name: 'Planejador Semanal', path: '/planner', icon: ListTodo },
-    { name: 'Especialista B2B', path: '/b2b-expert', icon: BriefcaseBusiness },
-  ]
+    { name: 'Dashboard', path: '/', icon: LayoutDashboard, show: true },
+    { name: 'Leads & Clientes', path: '/leads', icon: Users, show: true },
+    { name: 'Metas & Evolução', path: '/goals', icon: Target, show: true },
+    { name: 'Agenda', path: '/agenda', icon: CalendarDays, show: true },
+    { name: 'Planejador Semanal', path: '/planner', icon: ListTodo, show: true },
+    { name: 'Prospecção B2B', path: '/prospecting', icon: Telescope, show: true },
+    { name: 'Especialista B2B', path: '/b2b-expert', icon: BriefcaseBusiness, show: true },
+    { name: 'Relatórios', path: '/reports', icon: BarChart3, show: isManager },
+  ].filter((item) => item.show)
 
   return (
     <Sidebar>
@@ -44,7 +60,7 @@ export function AppSidebar() {
           <div className="h-8 w-8 rounded-lg bg-sidebar-primary flex items-center justify-center text-sidebar-primary-foreground font-bold text-lg">
             TF
           </div>
-          <span className="text-xl font-bold text-sidebar-foreground">TFC Gestão</span>
+          <span className="text-xl font-bold text-sidebar-foreground">CRM Inteligente</span>
         </div>
       </SidebarHeader>
       <SidebarContent>
@@ -70,6 +86,9 @@ export function AppSidebar() {
 }
 
 export default function Layout() {
+  const { consultants, currentUser, setCurrentUser } = useAppStore()
+  const me = consultants.find((c) => c.id === currentUser)
+
   return (
     <SidebarProvider>
       <div className="flex min-h-screen w-full bg-background text-foreground">
@@ -96,12 +115,37 @@ export default function Layout() {
                 <Bell className="h-5 w-5" />
                 <span className="absolute top-2 right-2.5 w-2 h-2 bg-destructive rounded-full" />
               </Button>
-              <div className="flex items-center gap-3 border-l pl-4 ml-2">
-                <UserCircle className="h-8 w-8 text-primary" />
-                <div className="text-sm hidden md:block">
-                  <p className="font-semibold leading-none">Gestor Op.</p>
-                  <p className="text-xs text-muted-foreground mt-1">TFC Corretora</p>
-                </div>
+              <div className="border-l pl-4 ml-2">
+                <DropdownMenu>
+                  <DropdownMenuTrigger asChild>
+                    <Button
+                      variant="ghost"
+                      className="h-auto p-2 flex items-center gap-3 hover:bg-muted/50"
+                    >
+                      <UserCircle className="h-8 w-8 text-primary" />
+                      <div className="text-sm hidden md:block text-left">
+                        <p className="font-semibold leading-none">{me?.name}</p>
+                        <p className="text-xs text-muted-foreground mt-1">{me?.role}</p>
+                      </div>
+                      <ChevronDown className="h-4 w-4 text-muted-foreground" />
+                    </Button>
+                  </DropdownMenuTrigger>
+                  <DropdownMenuContent align="end" className="w-56">
+                    <DropdownMenuLabel>Alternar Visualização</DropdownMenuLabel>
+                    <DropdownMenuSeparator />
+                    {consultants.map((c) => (
+                      <DropdownMenuItem
+                        key={c.id}
+                        onClick={() => setCurrentUser(c.id)}
+                        className={c.id === currentUser ? 'bg-muted font-medium' : ''}
+                      >
+                        <UserCircle className="mr-2 h-4 w-4" />
+                        <span>{c.name}</span>
+                        <span className="ml-auto text-xs text-muted-foreground">{c.role}</span>
+                      </DropdownMenuItem>
+                    ))}
+                  </DropdownMenuContent>
+                </DropdownMenu>
               </div>
             </div>
           </header>

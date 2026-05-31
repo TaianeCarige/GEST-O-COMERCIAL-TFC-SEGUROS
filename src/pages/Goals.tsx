@@ -20,7 +20,14 @@ import { LineChart, Line, CartesianGrid, XAxis, YAxis, PieChart, Pie, Cell } fro
 import { Badge } from '@/components/ui/badge'
 
 export default function Goals() {
-  const { consultants, leads } = useAppStore()
+  const { consultants, leads, currentUser } = useAppStore()
+
+  const me = consultants.find((c) => c.id === currentUser)
+  const isManager = me?.role === 'Gestora'
+  const visibleLeads = isManager ? leads : leads.filter((l) => l.consultantId === currentUser)
+  const visibleConsultants = isManager
+    ? consultants
+    : consultants.filter((c) => c.id === currentUser)
 
   // Mocking time-series data for evolution chart
   const evolutionData = [
@@ -41,7 +48,7 @@ export default function Goals() {
 
   // Calculate branch distribution from leads
   const branchMap: Record<string, number> = {}
-  leads
+  visibleLeads
     .filter((l) => l.status === 'Fechado')
     .forEach((l) => {
       branchMap[l.branch] = (branchMap[l.branch] || 0) + l.value
@@ -68,7 +75,12 @@ export default function Goals() {
   return (
     <div className="space-y-6">
       <div className="flex items-center justify-between">
-        <h1 className="text-3xl font-bold tracking-tight">Metas & Evolução em Vendas</h1>
+        <div>
+          <h1 className="text-3xl font-bold tracking-tight">Metas & Evolução em Vendas</h1>
+          <p className="text-muted-foreground mt-1">
+            {isManager ? 'Acompanhamento consolidado da corretora' : 'Suas metas e evolução'}
+          </p>
+        </div>
       </div>
 
       <div className="grid gap-6 md:grid-cols-2">
@@ -89,27 +101,41 @@ export default function Goals() {
                 />
                 <ChartTooltip content={<ChartTooltipContent />} />
                 <ChartLegend content={<ChartLegendContent />} />
-                <Line
-                  type="monotone"
-                  dataKey="Taiane"
-                  stroke="var(--color-Taiane)"
-                  strokeWidth={2}
-                  dot={false}
-                />
-                <Line
-                  type="monotone"
-                  dataKey="Carlos"
-                  stroke="var(--color-Carlos)"
-                  strokeWidth={2}
-                  dot={false}
-                />
-                <Line
-                  type="monotone"
-                  dataKey="Mariana"
-                  stroke="var(--color-Mariana)"
-                  strokeWidth={2}
-                  dot={false}
-                />
+
+                {isManager ? (
+                  <>
+                    <Line
+                      type="monotone"
+                      dataKey="Taiane"
+                      stroke="var(--color-Taiane)"
+                      strokeWidth={2}
+                      dot={false}
+                    />
+                    <Line
+                      type="monotone"
+                      dataKey="Carlos"
+                      stroke="var(--color-Carlos)"
+                      strokeWidth={2}
+                      dot={false}
+                    />
+                    <Line
+                      type="monotone"
+                      dataKey="Mariana"
+                      stroke="var(--color-Mariana)"
+                      strokeWidth={2}
+                      dot={false}
+                    />
+                  </>
+                ) : (
+                  <Line
+                    type="monotone"
+                    dataKey={me?.name || ''}
+                    stroke={`var(--color-${me?.name})`}
+                    strokeWidth={3}
+                    dot={false}
+                  />
+                )}
+
                 <Line
                   type="dashed"
                   strokeDasharray="5 5"
@@ -158,7 +184,7 @@ export default function Goals() {
 
       <Card>
         <CardHeader>
-          <CardTitle>Leaderboard de Consultores</CardTitle>
+          <CardTitle>Leaderboard e Desempenho</CardTitle>
           <CardDescription>
             Desempenho e insights baseados em atividades vs fechamentos
           </CardDescription>
@@ -175,7 +201,7 @@ export default function Goals() {
               </TableRow>
             </TableHeader>
             <TableBody>
-              {consultants
+              {visibleConsultants
                 .sort((a, b) => b.salesRealized / b.salesGoal - a.salesRealized / a.salesGoal)
                 .map((c) => {
                   const percentage = Math.round((c.salesRealized / c.salesGoal) * 100)

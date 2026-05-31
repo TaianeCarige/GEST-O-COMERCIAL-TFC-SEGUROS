@@ -11,6 +11,8 @@ import Goals from './pages/Goals'
 import Agenda from './pages/Agenda'
 import Planner from './pages/Planner'
 import B2BExpert from './pages/B2BExpert'
+import Prospecting from './pages/Prospecting'
+import Reports from './pages/Reports'
 import NotFound from './pages/NotFound'
 
 const App = () => (
@@ -27,6 +29,8 @@ const App = () => (
             <Route path="/agenda" element={<Agenda />} />
             <Route path="/planner" element={<Planner />} />
             <Route path="/b2b-expert" element={<B2BExpert />} />
+            <Route path="/prospecting" element={<Prospecting />} />
+            <Route path="/reports" element={<Reports />} />
           </Route>
           <Route path="*" element={<NotFound />} />
         </Routes>
