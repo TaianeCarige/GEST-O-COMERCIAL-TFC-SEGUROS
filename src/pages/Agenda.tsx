@@ -1,6 +1,8 @@
 import React, { useState } from 'react'
+import { useNavigate } from 'react-router-dom'
 import useAppStore, { Lead } from '@/stores/useAppStore'
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card'
+import { Button } from '@/components/ui/button'
 import {
   Dialog,
   DialogContent,
@@ -11,6 +13,7 @@ import {
 import { Briefcase } from 'lucide-react'
 
 export default function Agenda() {
+  const navigate = useNavigate()
   const { leads, consultants } = useAppStore()
   const [selectedEvent, setSelectedEvent] = useState<Lead | null>(null)
   const [dialogOpen, setDialogOpen] = useState(false)
@@ -152,15 +155,24 @@ export default function Agenda() {
 
                 <div className="bg-accent/10 p-4 rounded-lg flex items-start gap-3 mt-4 border border-accent/20">
                   <Briefcase className="h-5 w-5 text-accent mt-0.5 shrink-0" />
-                  <div>
+                  <div className="flex-1">
                     <p className="font-semibold text-sm text-foreground mb-1">
                       Recomendação de Preparação B2B
                     </p>
-                    <p className="text-sm text-muted-foreground">
+                    <p className="text-sm text-muted-foreground mb-3">
                       Analise o histórico de sinistralidade do cliente no ramo de{' '}
                       {selectedEvent.branch}. Prepare uma apresentação focada em mitigação de riscos
                       e redução de custos operacionais.
                     </p>
+                    <Button
+                      className="w-full sm:w-auto text-xs sm:text-sm"
+                      onClick={() => {
+                        setDialogOpen(false)
+                        navigate(`/b2b-expert?sector=${encodeURIComponent(selectedEvent.branch)}`)
+                      }}
+                    >
+                      Prepare-se com o Expert de Inteligência B2B para esta reunião
+                    </Button>
                   </div>
                 </div>
               </div>

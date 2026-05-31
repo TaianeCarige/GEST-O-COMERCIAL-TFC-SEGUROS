@@ -19,6 +19,7 @@ import {
   Search,
   UserCircle,
   Plus,
+  BriefcaseBusiness,
 } from 'lucide-react'
 import { Input } from '@/components/ui/input'
 import { Button } from '@/components/ui/button'
@@ -33,6 +34,7 @@ export function AppSidebar() {
     { name: 'Metas & Evolução', path: '/goals', icon: Target },
     { name: 'Agenda Compartilhada', path: '/agenda', icon: CalendarDays },
     { name: 'Planejador Semanal', path: '/planner', icon: ListTodo },
+    { name: 'Especialista B2B', path: '/b2b-expert', icon: BriefcaseBusiness },
   ]
 
   return (
