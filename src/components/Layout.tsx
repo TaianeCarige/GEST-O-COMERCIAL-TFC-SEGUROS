@@ -32,6 +32,10 @@ import {
   Telescope,
   BarChart3,
   ChevronDown,
+  FileText,
+  History,
+  Sparkles,
+  Inbox,
 } from 'lucide-react'
 import { Input } from '@/components/ui/input'
 import { Button } from '@/components/ui/button'
@@ -45,11 +49,15 @@ export function AppSidebar() {
   const navItems = [
     { name: 'Dashboard', path: '/', icon: LayoutDashboard, show: true },
     { name: 'Leads & Clientes', path: '/leads', icon: Users, show: true },
+    { name: 'Leads Disponíveis', path: '/available-leads', icon: Inbox, show: true },
+    { name: 'Gerador de Scripts', path: '/scripts', icon: FileText, show: true },
+    { name: 'Reativação (+90 dias)', path: '/reactivation', icon: History, show: true },
     { name: 'Metas & Evolução', path: '/goals', icon: Target, show: true },
     { name: 'Agenda', path: '/agenda', icon: CalendarDays, show: true },
     { name: 'Planejador Semanal', path: '/planner', icon: ListTodo, show: true },
     { name: 'Prospecção B2B', path: '/prospecting', icon: Telescope, show: true },
     { name: 'Especialista B2B', path: '/b2b-expert', icon: BriefcaseBusiness, show: true },
+    { name: 'Mentor VIP', path: '/vip-mentor', icon: Sparkles, show: true },
     { name: 'Relatórios', path: '/reports', icon: BarChart3, show: isManager },
   ].filter((item) => item.show)
 

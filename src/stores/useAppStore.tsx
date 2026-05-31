@@ -35,6 +35,16 @@ export interface Lead {
   scheduledDate?: string
 }
 
+export interface AvailableLead {
+  id: string
+  name: string
+  branch: Branch
+  revenue: string
+  contact: string
+  role: string
+  value: number
+}
+
 const now = new Date()
 const getDaysAgo = (days: number) =>
   new Date(now.getTime() - days * 24 * 60 * 60 * 1000).toISOString()
@@ -159,13 +169,54 @@ const MOCK_LEADS: Lead[] = [
   },
 ]
 
+const MOCK_AVAILABLE_LEADS: AvailableLead[] = [
+  {
+    id: 'a1',
+    name: 'Grupo ABC',
+    branch: 'Saúde',
+    revenue: 'R$ 10M - 50M',
+    contact: 'Dr. Roberto',
+    role: 'Diretor',
+    value: 20000,
+  },
+  {
+    id: 'a2',
+    name: 'Indústrias Metal Fort',
+    branch: 'Patrimonial',
+    revenue: 'R$ 100M+',
+    contact: 'Fernanda',
+    role: 'CEO',
+    value: 120000,
+  },
+  {
+    id: 'a3',
+    name: 'Transportadora Global',
+    branch: 'Automóveis/Frotas',
+    revenue: 'R$ 50M - 100M',
+    contact: 'Marcos',
+    role: 'Gerente de Logística',
+    value: 50000,
+  },
+  {
+    id: 'a4',
+    name: 'Clínica Saúde Plena',
+    branch: 'RC',
+    revenue: 'R$ 5M - 10M',
+    contact: 'Dra. Ana',
+    role: 'Sócia',
+    value: 15000,
+  },
+]
+
 interface AppStore {
   currentUser: string
   setCurrentUser: (id: string) => void
   leads: Lead[]
+  availableLeads: AvailableLead[]
   consultants: Consultant[]
   updateLeadStatus: (id: string, status: Status) => void
   getConsultant: (id: string) => Consultant | undefined
+  claimLead: (leadId: string) => void
 }
 
 const AppContext = createContext<AppStore | undefined>(undefined)
@@ -173,6 +224,7 @@ const AppContext = createContext<AppStore | undefined>(undefined)
 export function AppStoreProvider({ children }: { children: ReactNode }) {
   const [currentUser, setCurrentUser] = useState<string>('1') // Default to Manager (Taiane)
   const [leads, setLeads] = useState<Lead[]>(MOCK_LEADS)
+  const [availableLeads, setAvailableLeads] = useState<AvailableLead[]>(MOCK_AVAILABLE_LEADS)
   const [consultants] = useState<Consultant[]>(MOCK_CONSULTANTS)
 
   const updateLeadStatus = (id: string, status: Status) => {
@@ -181,9 +233,39 @@ export function AppStoreProvider({ children }: { children: ReactNode }) {
 
   const getConsultant = (id: string) => consultants.find((c) => c.id === id)
 
+  const claimLead = (leadId: string) => {
+    const leadToClaim = availableLeads.find((l) => l.id === leadId)
+    if (leadToClaim) {
+      setAvailableLeads((prev) => prev.filter((l) => l.id !== leadId))
+      setLeads((prev) => [
+        ...prev,
+        {
+          id: `claimed-${leadId}-${Date.now()}`,
+          name: leadToClaim.name,
+          branch: leadToClaim.branch,
+          status: 'Visita Pendente',
+          lastContact: new Date().toISOString(),
+          consultantId: currentUser,
+          value: leadToClaim.value,
+        },
+      ])
+    }
+  }
+
   return React.createElement(
     AppContext.Provider,
-    { value: { currentUser, setCurrentUser, leads, consultants, updateLeadStatus, getConsultant } },
+    {
+      value: {
+        currentUser,
+        setCurrentUser,
+        leads,
+        availableLeads,
+        consultants,
+        updateLeadStatus,
+        getConsultant,
+        claimLead,
+      },
+    },
     children,
   )
 }

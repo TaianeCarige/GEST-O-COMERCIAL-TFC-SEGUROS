@@ -36,9 +36,9 @@ export default function Index() {
     ? consultants
     : consultants.filter((c) => c.id === currentUser)
 
-  const totalSales = visibleLeads
-    .filter((l) => l.status === 'Fechado')
-    .reduce((sum, l) => sum + l.value, 0)
+  const totalSales = isManager
+    ? visibleLeads.filter((l) => l.status === 'Fechado').reduce((sum, l) => sum + l.value, 0)
+    : me?.salesRealized || 0
 
   const pendingVisitsCount = visibleLeads.filter(
     (l) => l.status === 'Visita Pendente' || l.status === 'Agendado',
@@ -84,21 +84,125 @@ export default function Index() {
         </div>
       </div>
 
+      {!isManager && (
+        <div className="grid gap-4 md:grid-cols-3 mb-6">
+          <Card className="hover:shadow-md transition-shadow">
+            <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+              <CardTitle className="text-sm font-medium">Meta de Ligações</CardTitle>
+            </CardHeader>
+            <CardContent>
+              <div className="text-2xl font-bold">
+                {me?.callsRealized} / {me?.callsGoal}
+              </div>
+              <div className="mt-3 space-y-1">
+                <div className="flex items-center justify-between text-xs text-muted-foreground">
+                  <span>Progresso</span>
+                  <span>
+                    {Math.min(
+                      Math.round(((me?.callsRealized || 0) / (me?.callsGoal || 1)) * 100),
+                      100,
+                    )}
+                    %
+                  </span>
+                </div>
+                <div className="w-full bg-secondary h-2 rounded-full overflow-hidden">
+                  <div
+                    className="bg-primary h-full transition-all"
+                    style={{
+                      width: `${Math.min(Math.round(((me?.callsRealized || 0) / (me?.callsGoal || 1)) * 100), 100)}%`,
+                    }}
+                  />
+                </div>
+              </div>
+            </CardContent>
+          </Card>
+          <Card className="hover:shadow-md transition-shadow">
+            <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+              <CardTitle className="text-sm font-medium">Meta de Visitas</CardTitle>
+            </CardHeader>
+            <CardContent>
+              <div className="text-2xl font-bold">
+                {me?.visitsRealized} / {me?.visitsGoal}
+              </div>
+              <div className="mt-3 space-y-1">
+                <div className="flex items-center justify-between text-xs text-muted-foreground">
+                  <span>Progresso</span>
+                  <span>
+                    {Math.min(
+                      Math.round(((me?.visitsRealized || 0) / (me?.visitsGoal || 1)) * 100),
+                      100,
+                    )}
+                    %
+                  </span>
+                </div>
+                <div className="w-full bg-secondary h-2 rounded-full overflow-hidden">
+                  <div
+                    className="bg-accent h-full transition-all"
+                    style={{
+                      width: `${Math.min(Math.round(((me?.visitsRealized || 0) / (me?.visitsGoal || 1)) * 100), 100)}%`,
+                    }}
+                  />
+                </div>
+              </div>
+            </CardContent>
+          </Card>
+          <Card className="hover:shadow-md transition-shadow">
+            <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+              <CardTitle className="text-sm font-medium">Meta de Vendas</CardTitle>
+            </CardHeader>
+            <CardContent>
+              <div className="text-2xl font-bold text-success">
+                {new Intl.NumberFormat('pt-BR', {
+                  style: 'currency',
+                  currency: 'BRL',
+                  maximumFractionDigits: 0,
+                }).format(totalSales)}
+              </div>
+              <div className="mt-3 space-y-1">
+                <div className="flex items-center justify-between text-xs text-muted-foreground">
+                  <span>
+                    Meta:{' '}
+                    {new Intl.NumberFormat('pt-BR', {
+                      style: 'currency',
+                      currency: 'BRL',
+                      maximumFractionDigits: 0,
+                    }).format(me?.salesGoal || 0)}
+                  </span>
+                  <span>
+                    {Math.min(Math.round((totalSales / (me?.salesGoal || 1)) * 100), 100)}%
+                  </span>
+                </div>
+                <div className="w-full bg-secondary h-2 rounded-full overflow-hidden">
+                  <div
+                    className="bg-success h-full transition-all"
+                    style={{
+                      width: `${Math.min(Math.round((totalSales / (me?.salesGoal || 1)) * 100), 100)}%`,
+                    }}
+                  />
+                </div>
+              </div>
+            </CardContent>
+          </Card>
+        </div>
+      )}
+
       <div className="grid gap-4 md:grid-cols-3">
-        <Card className="hover:shadow-md transition-shadow">
-          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-            <CardTitle className="text-sm font-medium">Vendas Fechadas (Mês)</CardTitle>
-            <DollarSign className="h-4 w-4 text-success" />
-          </CardHeader>
-          <CardContent>
-            <div className="text-2xl font-bold text-success">
-              {new Intl.NumberFormat('pt-BR', { style: 'currency', currency: 'BRL' }).format(
-                totalSales,
-              )}
-            </div>
-            <p className="text-xs text-muted-foreground mt-1">+12% em relação ao mês anterior</p>
-          </CardContent>
-        </Card>
+        {isManager && (
+          <Card className="hover:shadow-md transition-shadow">
+            <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+              <CardTitle className="text-sm font-medium">Progresso de Vendas (Mês)</CardTitle>
+              <DollarSign className="h-4 w-4 text-success" />
+            </CardHeader>
+            <CardContent>
+              <div className="text-2xl font-bold text-success">
+                {new Intl.NumberFormat('pt-BR', { style: 'currency', currency: 'BRL' }).format(
+                  totalSales,
+                )}
+              </div>
+              <p className="text-xs text-muted-foreground mt-1">+12% em relação ao mês anterior</p>
+            </CardContent>
+          </Card>
+        )}
         <Card className="hover:shadow-md transition-shadow">
           <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
             <CardTitle className="text-sm font-medium">Visitas Pendentes / Agendadas</CardTitle>
@@ -172,10 +276,10 @@ export default function Index() {
           <CardHeader className="flex flex-row items-center justify-between pb-2">
             <div className="space-y-1">
               <CardTitle>Alerta de Retenção</CardTitle>
-              <CardDescription>Ação imediata necessária</CardDescription>
+              <CardDescription>Ação imediata necessária (+90 dias)</CardDescription>
             </div>
             <Button variant="ghost" size="icon" asChild>
-              <Link to="/planner">
+              <Link to="/reactivation">
                 <ChevronRight className="h-5 w-5" />
               </Link>
             </Button>

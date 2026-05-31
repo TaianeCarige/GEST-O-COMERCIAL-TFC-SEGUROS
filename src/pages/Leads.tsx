@@ -36,6 +36,7 @@ import {
 } from '@/components/ui/dialog'
 import { useToast } from '@/hooks/use-toast'
 import { MoreHorizontal, Filter, Megaphone, HelpCircle } from 'lucide-react'
+import { Link } from 'react-router-dom'
 
 export default function Leads() {
   const { leads, updateLeadStatus, getConsultant, consultants, currentUser } = useAppStore()
@@ -222,6 +223,20 @@ export default function Leads() {
                               className="text-destructive focus:text-destructive"
                             >
                               Registrar Objeção
+                            </DropdownMenuItem>
+                            <DropdownMenuSeparator />
+                            <DropdownMenuLabel className="text-xs font-semibold text-muted-foreground uppercase">
+                              Integração Experts
+                            </DropdownMenuLabel>
+                            <DropdownMenuItem asChild>
+                              <Link to={`/b2b-expert?sector=${encodeURIComponent(lead.branch)}`}>
+                                Briefing Técnico
+                              </Link>
+                            </DropdownMenuItem>
+                            <DropdownMenuItem asChild>
+                              <Link to={`/vip-mentor?lead=${encodeURIComponent(lead.name)}`}>
+                                Refinamento VIP
+                              </Link>
                             </DropdownMenuItem>
                           </DropdownMenuContent>
                         </DropdownMenu>

@@ -34,6 +34,11 @@ export default function Reports() {
           ? Math.round((closedLeads.length / consultantLeads.length) * 100)
           : 0
 
+      // Avanço de Funil (Leads that are in negotiation or scheduled)
+      const funnelAdvancement = consultantLeads.filter(
+        (l) => l.status === 'Em Negociação' || l.status === 'Agendado' || l.status === 'Fechado',
+      ).length
+
       // Determine bottlenecks (Gargalos)
       const bottlenecks = []
       if (c.callsRealized < c.callsGoal * 0.8) {
@@ -92,8 +97,9 @@ export default function Reports() {
               <TableHeader>
                 <TableRow>
                   <TableHead>Consultor</TableHead>
-                  <TableHead className="text-center">Clientes Contatados</TableHead>
-                  <TableHead className="text-center">Taxa de Conversão</TableHead>
+                  <TableHead className="text-center">Contatados</TableHead>
+                  <TableHead className="text-center">Avanço no Funil</TableHead>
+                  <TableHead className="text-center">Taxa Conversão</TableHead>
                   <TableHead>Diagnóstico (Gargalos)</TableHead>
                 </TableRow>
               </TableHeader>
@@ -102,6 +108,7 @@ export default function Reports() {
                   <TableRow key={c.id}>
                     <TableCell className="font-medium">{c.name}</TableCell>
                     <TableCell className="text-center">{c.totalContacts}</TableCell>
+                    <TableCell className="text-center">{c.funnelAdvancement}</TableCell>
                     <TableCell className="text-center">
                       <Badge
                         variant={

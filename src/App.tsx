@@ -14,6 +14,10 @@ import B2BExpert from './pages/B2BExpert'
 import Prospecting from './pages/Prospecting'
 import Reports from './pages/Reports'
 import NotFound from './pages/NotFound'
+import AvailableLeads from './pages/AvailableLeads'
+import ScriptGenerator from './pages/ScriptGenerator'
+import Reactivation from './pages/Reactivation'
+import VIPMentor from './pages/VIPMentor'
 
 const App = () => (
   <BrowserRouter future={{ v7_startTransition: false, v7_relativeSplatPath: false }}>
@@ -25,10 +29,14 @@ const App = () => (
           <Route element={<Layout />}>
             <Route path="/" element={<Index />} />
             <Route path="/leads" element={<Leads />} />
+            <Route path="/available-leads" element={<AvailableLeads />} />
+            <Route path="/scripts" element={<ScriptGenerator />} />
+            <Route path="/reactivation" element={<Reactivation />} />
             <Route path="/goals" element={<Goals />} />
             <Route path="/agenda" element={<Agenda />} />
             <Route path="/planner" element={<Planner />} />
             <Route path="/b2b-expert" element={<B2BExpert />} />
+            <Route path="/vip-mentor" element={<VIPMentor />} />
             <Route path="/prospecting" element={<Prospecting />} />
             <Route path="/reports" element={<Reports />} />
           </Route>
