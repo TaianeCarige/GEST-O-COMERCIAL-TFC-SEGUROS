@@ -124,11 +124,14 @@ export default function Users() {
 
       <Alert className="bg-primary/5 border-primary/20">
         <Database className="h-4 w-4 text-primary" />
-        <AlertTitle className="text-primary font-semibold">Persistência de Dados</AlertTitle>
+        <AlertTitle className="text-primary font-semibold">
+          Nota sobre Persistência de Dados
+        </AlertTitle>
         <AlertDescription className="text-muted-foreground mt-1">
           As alterações de permissões e usuários estão sendo salvas no state temporário. Para
           persistência definitiva e aplicação segura do RBAC, conecte com o banco de dados (Supabase
-          ou Skip Cloud).
+          ou Skip Cloud). É necessário para persistir contas de usuários, permissões e histórico de
+          ações permanentemente.
         </AlertDescription>
       </Alert>
 

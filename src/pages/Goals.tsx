@@ -18,9 +18,14 @@ import {
 } from '@/components/ui/chart'
 import { LineChart, Line, CartesianGrid, XAxis, YAxis, PieChart, Pie, Cell } from 'recharts'
 import { Badge } from '@/components/ui/badge'
+import { Input } from '@/components/ui/input'
+import { Button } from '@/components/ui/button'
+import { Save } from 'lucide-react'
+import { useToast } from '@/hooks/use-toast'
 
 export default function Goals() {
-  const { consultants, leads, currentUser } = useAppStore()
+  const { consultants, leads, currentUser, updateConsultantGoals } = useAppStore()
+  const { toast } = useToast()
 
   const me = consultants.find((c) => c.id === currentUser)
   const isManager = me?.role === 'Gestora'
@@ -70,6 +75,35 @@ export default function Goals() {
 
   const pieChartConfig = {
     value: { label: 'Valor (R$)' },
+  }
+
+  const [editingGoals, setEditingGoals] = React.useState<
+    Record<string, { callsGoal: number; visitsGoal: number; salesGoal: number }>
+  >({})
+
+  const handleGoalChange = (id: string, field: string, value: string) => {
+    setEditingGoals((prev) => ({
+      ...prev,
+      [id]: {
+        ...(prev[id] || {
+          callsGoal: consultants.find((c) => c.id === id)?.callsGoal || 0,
+          visitsGoal: consultants.find((c) => c.id === id)?.visitsGoal || 0,
+          salesGoal: consultants.find((c) => c.id === id)?.salesGoal || 0,
+        }),
+        [field]: Number(value),
+      },
+    }))
+  }
+
+  const handleSaveGoals = (id: string) => {
+    const goals = editingGoals[id]
+    if (goals) {
+      updateConsultantGoals(id, goals)
+      toast({
+        title: 'Metas Atualizadas',
+        description: 'As metas do consultor foram salvas com sucesso.',
+      })
+    }
   }
 
   return (
@@ -190,82 +224,175 @@ export default function Goals() {
           </CardDescription>
         </CardHeader>
         <CardContent>
-          <Table>
-            <TableHeader>
-              <TableRow>
-                <TableHead>Consultor</TableHead>
-                <TableHead>Meta (R$)</TableHead>
-                <TableHead>Realizado (R$)</TableHead>
-                <TableHead>Evolução da Carteira</TableHead>
-                <TableHead>Insights Práticos</TableHead>
-              </TableRow>
-            </TableHeader>
-            <TableBody>
-              {visibleConsultants
-                .sort((a, b) => b.salesRealized / b.salesGoal - a.salesRealized / a.salesGoal)
-                .map((c) => {
-                  const percentage = Math.round((c.salesRealized / c.salesGoal) * 100)
-                  const isUnderperforming = percentage < 80
-                  const lowVisits = c.visitsRealized < c.visitsGoal
+          <div className="overflow-x-auto">
+            <Table>
+              <TableHeader>
+                <TableRow>
+                  <TableHead>Consultor</TableHead>
+                  <TableHead>Meta (R$)</TableHead>
+                  <TableHead>Realizado (R$)</TableHead>
+                  <TableHead>Evolução da Carteira</TableHead>
+                  <TableHead>Insights Práticos</TableHead>
+                  {isManager && <TableHead className="text-right">Ações</TableHead>}
+                </TableRow>
+              </TableHeader>
+              <TableBody>
+                {visibleConsultants
+                  .sort((a, b) => b.salesRealized / b.salesGoal - a.salesRealized / a.salesGoal)
+                  .map((c) => {
+                    const percentage = Math.round((c.salesRealized / c.salesGoal) * 100)
+                    const isUnderperforming = percentage < 80
+                    const lowVisits = c.visitsRealized < c.visitsGoal
 
-                  let insight = 'Desempenho sólido. Manter a cadência de visitas.'
-                  if (isUnderperforming && lowVisits) {
-                    insight =
-                      'Aumentar volume de visitas. A conversão depende de maior contato presencial.'
-                  } else if (isUnderperforming && !lowVisits) {
-                    insight =
-                      'Rever técnicas de fechamento. Alto volume de visitas com baixa conversão.'
-                  } else if (percentage >= 100) {
-                    insight = 'Meta batida! Focar em cross-sell e up-sell na carteira atual.'
-                  }
+                    let insight = 'Desempenho sólido. Manter a cadência de visitas.'
+                    if (isUnderperforming && lowVisits) {
+                      insight =
+                        'Aumentar volume de visitas. A conversão depende de maior contato presencial.'
+                    } else if (isUnderperforming && !lowVisits) {
+                      insight =
+                        'Rever técnicas de fechamento. Alto volume de visitas com baixa conversão.'
+                    } else if (percentage >= 100) {
+                      insight = 'Meta batida! Focar em cross-sell e up-sell na carteira atual.'
+                    }
 
-                  return (
-                    <TableRow key={c.id}>
-                      <TableCell className="font-medium flex items-center gap-2">
-                        <div
-                          className="w-3 h-3 rounded-full"
-                          style={{ backgroundColor: c.color }}
-                        ></div>
-                        {c.name}
-                      </TableCell>
-                      <TableCell>
-                        {new Intl.NumberFormat('pt-BR', {
-                          style: 'currency',
-                          currency: 'BRL',
-                        }).format(c.salesGoal)}
-                      </TableCell>
-                      <TableCell className={percentage >= 100 ? 'text-success font-bold' : ''}>
-                        {new Intl.NumberFormat('pt-BR', {
-                          style: 'currency',
-                          currency: 'BRL',
-                        }).format(c.salesRealized)}
-                      </TableCell>
-                      <TableCell>
-                        <div className="flex items-center gap-2">
-                          <div className="w-24 h-2 bg-muted rounded-full overflow-hidden">
-                            <div
-                              className={`h-full ${percentage >= 100 ? 'bg-success' : percentage > 75 ? 'bg-accent' : 'bg-destructive'}`}
-                              style={{ width: `${Math.min(percentage, 100)}%` }}
-                            ></div>
+                    return (
+                      <TableRow key={c.id}>
+                        <TableCell className="font-medium flex items-center gap-2">
+                          <div
+                            className="w-3 h-3 rounded-full"
+                            style={{ backgroundColor: c.color }}
+                          ></div>
+                          {c.name}
+                        </TableCell>
+                        <TableCell>
+                          {new Intl.NumberFormat('pt-BR', {
+                            style: 'currency',
+                            currency: 'BRL',
+                          }).format(c.salesGoal)}
+                        </TableCell>
+                        <TableCell className={percentage >= 100 ? 'text-success font-bold' : ''}>
+                          {new Intl.NumberFormat('pt-BR', {
+                            style: 'currency',
+                            currency: 'BRL',
+                          }).format(c.salesRealized)}
+                        </TableCell>
+                        <TableCell>
+                          <div className="flex items-center gap-2">
+                            <div className="w-24 h-2 bg-muted rounded-full overflow-hidden">
+                              <div
+                                className={`h-full ${percentage >= 100 ? 'bg-success' : percentage > 75 ? 'bg-accent' : 'bg-destructive'}`}
+                                style={{ width: `${Math.min(percentage, 100)}%` }}
+                              ></div>
+                            </div>
+                            <span className="text-sm font-medium">{percentage}%</span>
                           </div>
-                          <span className="text-sm font-medium">{percentage}%</span>
-                        </div>
-                      </TableCell>
-                      <TableCell>
-                        <Badge
-                          variant={isUnderperforming ? 'destructive' : 'secondary'}
-                          className="font-normal text-xs leading-tight whitespace-normal max-w-[250px] inline-block"
-                        >
-                          {insight}
-                        </Badge>
-                      </TableCell>
-                    </TableRow>
-                  )
-                })}
-            </TableBody>
-          </Table>
+                        </TableCell>
+                        <TableCell>
+                          <Badge
+                            variant={isUnderperforming ? 'destructive' : 'secondary'}
+                            className="font-normal text-xs leading-tight whitespace-normal max-w-[250px] inline-block"
+                          >
+                            {insight}
+                          </Badge>
+                        </TableCell>
+                        {isManager && (
+                          <TableCell className="text-right">
+                            <Button
+                              variant="ghost"
+                              size="sm"
+                              onClick={() => {
+                                if (!editingGoals[c.id]) {
+                                  handleGoalChange(c.id, 'callsGoal', String(c.callsGoal))
+                                }
+                                const el = document.getElementById('manager-goals')
+                                if (el) el.scrollIntoView({ behavior: 'smooth' })
+                              }}
+                            >
+                              Editar
+                            </Button>
+                          </TableCell>
+                        )}
+                      </TableRow>
+                    )
+                  })}
+              </TableBody>
+            </Table>
+          </div>
         </CardContent>
       </Card>
+
+      {isManager && (
+        <Card id="manager-goals" className="mt-6">
+          <CardHeader>
+            <CardTitle>Gestão de Metas da Equipe</CardTitle>
+            <CardDescription>
+              Defina os objetivos de ligações, visitas e vendas (R$) por consultor
+            </CardDescription>
+          </CardHeader>
+          <CardContent>
+            <div className="overflow-x-auto">
+              <Table>
+                <TableHeader>
+                  <TableRow>
+                    <TableHead>Consultor</TableHead>
+                    <TableHead>Ligações</TableHead>
+                    <TableHead>Visitas</TableHead>
+                    <TableHead>Vendas (R$)</TableHead>
+                    <TableHead className="text-right">Ação</TableHead>
+                  </TableRow>
+                </TableHeader>
+                <TableBody>
+                  {visibleConsultants.map((c) => {
+                    const currentEdit = editingGoals[c.id] || {
+                      callsGoal: c.callsGoal,
+                      visitsGoal: c.visitsGoal,
+                      salesGoal: c.salesGoal,
+                    }
+                    return (
+                      <TableRow key={`edit-${c.id}`}>
+                        <TableCell className="font-medium">{c.name}</TableCell>
+                        <TableCell>
+                          <Input
+                            type="number"
+                            className="w-24"
+                            value={currentEdit.callsGoal}
+                            onChange={(e) => handleGoalChange(c.id, 'callsGoal', e.target.value)}
+                          />
+                        </TableCell>
+                        <TableCell>
+                          <Input
+                            type="number"
+                            className="w-24"
+                            value={currentEdit.visitsGoal}
+                            onChange={(e) => handleGoalChange(c.id, 'visitsGoal', e.target.value)}
+                          />
+                        </TableCell>
+                        <TableCell>
+                          <Input
+                            type="number"
+                            className="w-32"
+                            value={currentEdit.salesGoal}
+                            onChange={(e) => handleGoalChange(c.id, 'salesGoal', e.target.value)}
+                          />
+                        </TableCell>
+                        <TableCell className="text-right">
+                          <Button
+                            size="sm"
+                            onClick={() => handleSaveGoals(c.id)}
+                            disabled={!editingGoals[c.id]}
+                          >
+                            <Save className="w-4 h-4 mr-2" /> Salvar
+                          </Button>
+                        </TableCell>
+                      </TableRow>
+                    )
+                  })}
+                </TableBody>
+              </Table>
+            </div>
+          </CardContent>
+        </Card>
+      )}
     </div>
   )
 }

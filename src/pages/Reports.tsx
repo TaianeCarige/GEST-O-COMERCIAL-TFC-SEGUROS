@@ -10,8 +10,9 @@ import {
   TableRow,
 } from '@/components/ui/table'
 import { Badge } from '@/components/ui/badge'
-import { TrendingUp, Award, Building2 } from 'lucide-react'
+import { TrendingUp, Award, Building2, Target } from 'lucide-react'
 import { Navigate } from 'react-router-dom'
+import { Progress } from '@/components/ui/progress'
 
 export default function Reports() {
   const { consultants, leads, currentUser, gerentes1327, permissions } = useAppStore()
@@ -257,6 +258,103 @@ export default function Reports() {
           </Card>
         </div>
       </div>
+
+      <Card>
+        <CardHeader>
+          <CardTitle className="flex items-center gap-2">
+            <Target className="h-5 w-5 text-primary" />
+            Planejado vs Realizado (Semanal)
+          </CardTitle>
+          <CardDescription>
+            Acompanhamento de metas de atividades e funil de vendas por consultor
+          </CardDescription>
+        </CardHeader>
+        <CardContent>
+          <div className="overflow-x-auto">
+            <Table>
+              <TableHeader>
+                <TableRow>
+                  <TableHead className="w-[200px]">Consultor</TableHead>
+                  <TableHead>Ligações</TableHead>
+                  <TableHead>Visitas</TableHead>
+                  <TableHead>Vendas (R$)</TableHead>
+                </TableRow>
+              </TableHeader>
+              <TableBody>
+                {teamMembers.map((member) => (
+                  <TableRow key={member.id}>
+                    <TableCell className="font-medium">
+                      {member.name}
+                      <p className="text-xs text-muted-foreground">{member.role}</p>
+                    </TableCell>
+                    <TableCell>
+                      <div className="space-y-2">
+                        <div className="flex items-center justify-between text-xs">
+                          <span>{member.callsRealized}</span>
+                          <span className="text-muted-foreground">Meta: {member.callsGoal}</span>
+                        </div>
+                        <Progress
+                          value={
+                            member.callsGoal > 0
+                              ? (member.callsRealized / member.callsGoal) * 100
+                              : 0
+                          }
+                          className="h-2"
+                        />
+                      </div>
+                    </TableCell>
+                    <TableCell>
+                      <div className="space-y-2">
+                        <div className="flex items-center justify-between text-xs">
+                          <span>{member.visitsRealized}</span>
+                          <span className="text-muted-foreground">Meta: {member.visitsGoal}</span>
+                        </div>
+                        <Progress
+                          value={
+                            member.visitsGoal > 0
+                              ? (member.visitsRealized / member.visitsGoal) * 100
+                              : 0
+                          }
+                          className="h-2 bg-accent/20"
+                        />
+                      </div>
+                    </TableCell>
+                    <TableCell>
+                      <div className="space-y-2">
+                        <div className="flex items-center justify-between text-xs">
+                          <span>
+                            {new Intl.NumberFormat('pt-BR', {
+                              style: 'currency',
+                              currency: 'BRL',
+                              maximumFractionDigits: 0,
+                            }).format(member.salesRealized)}
+                          </span>
+                          <span className="text-muted-foreground">
+                            Meta:{' '}
+                            {new Intl.NumberFormat('pt-BR', {
+                              style: 'currency',
+                              currency: 'BRL',
+                              maximumFractionDigits: 0,
+                            }).format(member.salesGoal)}
+                          </span>
+                        </div>
+                        <Progress
+                          value={
+                            member.salesGoal > 0
+                              ? (member.salesRealized / member.salesGoal) * 100
+                              : 0
+                          }
+                          className="h-2 bg-success/20"
+                        />
+                      </div>
+                    </TableCell>
+                  </TableRow>
+                ))}
+              </TableBody>
+            </Table>
+          </div>
+        </CardContent>
+      </Card>
     </div>
   )
 }

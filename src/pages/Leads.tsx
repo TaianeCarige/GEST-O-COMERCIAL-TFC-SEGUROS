@@ -66,34 +66,34 @@ import { Navigate } from 'react-router-dom'
 
 const SCRIPT_TEMPLATES = {
   Saúde: {
-    hook: 'Somos especialistas em blindagem e gestão de benefícios corporativos de alto nível.',
-    pain: 'Sabemos que a inflação médica e a dificuldade na retenção de talentos estão esmagando as margens das operações neste ano.',
+    hook: 'Somos especialistas em blindagem patrimonial e eficiência de custos com benefícios corporativos.',
+    pain: 'Sabemos que a inflação médica e a dificuldade na retenção de talentos estão impactando as margens das operações e expondo o caixa.',
     value:
-      'Desenhamos uma arquitetura de Saúde focada na retenção de talentos críticos e gestão de benefícios, enquanto aplicamos engenharia de redução de sinistralidade.',
+      'Desenhamos uma arquitetura de Saúde focada na redução de sinistralidade e otimização de custos, garantindo a proteção financeira do seu balanço.',
   },
   Odonto: {
-    hook: 'Atuamos na valorização do capital humano com alto impacto perceptível.',
-    pain: 'Muitas empresas perdem a chance de fidelizar a equipe por não oferecerem benefícios de alta percepção.',
+    hook: 'Atuamos na valorização do capital humano com alto impacto perceptível e eficiência de custos.',
+    pain: 'Muitas empresas perdem a chance de fidelizar a equipe e acabam assumindo passivos trabalhistas ocultos.',
     value:
-      'A TFC estrutura planos odontológicos focados em retenção de talentos e gestão de benefícios eficientes que não oneram a folha.',
+      'A TFC estrutura planos odontológicos eficientes que não oneram a folha e atuam como uma camada extra de proteção ao capital humano.',
   },
   Patrimonial: {
-    hook: 'Nossa consultoria é focada na continuidade de negócios e proteção de balanço financeiro.',
+    hook: 'Nossa consultoria é focada na continuidade de negócios, blindagem patrimonial e proteção do balanço financeiro.',
     pain: 'Uma interrupção operacional imprevista pode quebrar o caixa de operações que não possuem compliance adequado de apólices.',
     value:
-      'Realizamos uma varredura de exposição de riscos e desenhamos uma blindagem jurídica e continuidade de negócios garantindo a solidez corporativa.',
+      'Realizamos uma varredura de exposição de riscos e desenhamos uma blindagem jurídica e patrimonial, garantindo a solidez e eficiência de custos.',
   },
   Frota: {
-    hook: 'Somos especialistas em otimização de custo logístico e proteção de ativos corporativos.',
-    pain: 'Veículos parados ou sinistros mal geridos representam aumento de custos operacionais e gargalos na entrega.',
+    hook: 'Somos especialistas em otimização de custo logístico e blindagem patrimonial de ativos corporativos.',
+    pain: 'Veículos parados ou sinistros mal geridos representam aumento drástico de custos operacionais e passivos.',
     value:
-      'A TFC implementa uma proteção de ativos e gestão de frotas com assistência corporativa 24h, reduzindo significativamente seu custo operacional.',
+      'A TFC implementa proteção de ativos e gestão de frotas, reduzindo significativamente seu custo operacional e exposição de capital.',
   },
   RC: {
-    hook: 'Atuamos com proteção patrimonial corporativa para sócios, diretores e operações complexas.',
-    pain: 'Processos judiciais e falhas em compliance estão em escalada, ameaçando o patrimônio da empresa e dos executivos.',
+    hook: 'Atuamos com proteção e blindagem patrimonial corporativa para sócios, diretores e operações complexas.',
+    pain: 'Processos judiciais e falhas em compliance estão em escalada, ameaçando diretamente o patrimônio da empresa e de seus executivos.',
     value:
-      'Estruturamos a blindagem jurídica legal e compliance através do Responsabilidade Civil, permitindo que a liderança atue sem exposição patrimonial.',
+      'Estruturamos a blindagem jurídica através do seguro de Responsabilidade Civil, permitindo operação sem exposição patrimonial e com eficiência de custos.',
   },
 }
 
@@ -388,16 +388,19 @@ function LeadsTable({
                       <TableCell>
                         <div className="flex flex-col gap-1 items-start">
                           {inactive && (
-                            <Badge variant="destructive" className="text-[10px]">
-                              REATIVAÇÃO
+                            <Badge
+                              variant="destructive"
+                              className="text-[10px] flex items-center gap-1"
+                            >
+                              <AlertTriangle className="w-3 h-3" /> REATIVAÇÃO (+90d)
                             </Badge>
                           )}
                           {expiring && (
                             <Badge
                               variant="outline"
-                              className="text-[10px] border-amber-500 text-amber-600"
+                              className="text-[10px] border-amber-500 text-amber-600 flex items-center gap-1"
                             >
-                              VENCIMENTO PRÓXIMO
+                              <AlertTriangle className="w-3 h-3" /> VENCIMENTO PRÓXIMO
                             </Badge>
                           )}
                           {!inactive && !expiring && (
@@ -725,15 +728,12 @@ Como está sua disponibilidade para um call na próxima terça-feira pela manhã
               const formattedDate = `${dateObj.toLocaleDateString('pt-BR')} ${dateObj.toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit' })}`
               return (
                 <div key={h.id} className="text-sm border p-3 rounded-md bg-card">
-                  <div className="flex justify-between items-center mb-2">
-                    <Badge variant="secondary" className="text-[10px] font-mono">
-                      {h.userName} - {formattedDate}
-                    </Badge>
+                  <div className="flex justify-end mb-2">
                     <Badge variant="outline" className="text-[10px]">
                       {h.newStatus}
                     </Badge>
                   </div>
-                  <p className="text-foreground/90">{h.note}</p>
+                  <p className="text-foreground/90 whitespace-pre-wrap">{h.note}</p>
                 </div>
               )
             })}

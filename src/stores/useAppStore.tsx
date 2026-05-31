@@ -320,6 +320,10 @@ interface AppStore {
   updatePolicyDate: (leadId: string, type: PolicyType, date: string) => void
   addInteraction: (leadId: string, note: string, newStatus: Status) => void
   addGerente1327: (name: string) => void
+  updateConsultantGoals: (
+    id: string,
+    goals: { callsGoal: number; visitsGoal: number; salesGoal: number },
+  ) => void
   importLeads: (gerenteId: string, category: '1327' | 'Corporate') => void
   addConsultant: (consultant: Omit<Consultant, 'id'>) => void
   resetPassword: (id: string) => void
@@ -410,12 +414,17 @@ export function AppStoreProvider({ children }: { children: ReactNode }) {
   const addInteraction = (leadId: string, note: string, newStatus: Status) => {
     const me = consultants.find((c) => c.id === currentUser)
     if (!me) return
+
+    const dateObj = new Date()
+    const formattedDate = `${dateObj.toLocaleDateString('pt-BR')} ${dateObj.toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit' })}`
+    const formattedNote = `${note} - ${me.name} - ${formattedDate}`
+
     const interaction: Interaction = {
       id: `h-${Date.now()}`,
-      date: new Date().toISOString(),
+      date: dateObj.toISOString(),
       userId: me.id,
       userName: me.name,
-      note,
+      note: formattedNote,
       newStatus,
     }
     setLeads((prev) =>
@@ -462,6 +471,13 @@ export function AppStoreProvider({ children }: { children: ReactNode }) {
     console.log(`Reset password for consultant ${id}`)
   }
 
+  const updateConsultantGoals = (
+    id: string,
+    goals: { callsGoal: number; visitsGoal: number; salesGoal: number },
+  ) => {
+    setConsultants((prev) => prev.map((c) => (c.id === id ? { ...c, ...goals } : c)))
+  }
+
   const updatePermission = (role: Role, key: PermissionKey, value: boolean) => {
     setPermissions((prev) => ({
       ...prev,
@@ -496,6 +512,7 @@ export function AppStoreProvider({ children }: { children: ReactNode }) {
         importLeads,
         addConsultant,
         resetPassword,
+        updateConsultantGoals,
       },
     },
     children,
