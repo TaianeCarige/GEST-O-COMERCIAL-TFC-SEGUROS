@@ -1,6 +1,6 @@
 import React, { useState } from 'react'
 import useAppStore, { Branch, Status, PolicyType, Lead } from '@/stores/useAppStore'
-import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
+import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card'
 import {
   Table,
   TableBody,
@@ -60,20 +60,40 @@ import {
   RefreshCw,
   Sparkles,
   CalendarDays,
+  Copy,
 } from 'lucide-react'
 
 const SCRIPT_TEMPLATES = {
-  Saúde: [
-    'Somos especialistas em blindagem e gestão de benefícios corporativos de alto nível. Sabendo que a inflação médica esmaga as margens, desenhamos uma arquitetura de Saúde focada na retenção de talentos e redução de sinistralidade. Podemos agendar 15 min na próxima terça?',
-    'Atuamos como parceiros estratégicos na otimização de custos com saúde corporativa. Implementamos modelos preditivos de gestão de saúde. Tem agenda livre na quinta-feira à tarde para um bate-papo rápido?',
-  ],
-  Patrimonial: [
-    'Nossa consultoria é focada na continuidade de negócios e proteção do balanço financeiro. Realizamos uma varredura de exposição a riscos e blindagem jurídica. Gostaria de agendar 15 minutos para apresentar nosso modelo?',
-    'Somos especialistas na proteção de ativos críticos e mitigação de riscos empresariais. Garantimos que o seu balanço permaneça protegido mesmo nos piores cenários. Tem disponibilidade para uma conversa de 10 minutos?',
-  ],
-  Frota: [
-    'Somos especialistas em otimização de custo logístico e proteção de ativos corporativos. Implementamos proteção de ativos e gestão de frotas com assistência 24h. Podemos marcar um café virtual na terça-feira?',
-  ],
+  Saúde: {
+    hook: 'Somos especialistas em blindagem e gestão de benefícios corporativos de alto nível.',
+    pain: 'Sabemos que a inflação médica e a dificuldade na retenção de talentos estão esmagando as margens das operações neste ano.',
+    value:
+      'Desenhamos uma arquitetura de Saúde focada na retenção de talentos críticos e gestão de benefícios, enquanto aplicamos engenharia de redução de sinistralidade.',
+  },
+  Odonto: {
+    hook: 'Atuamos na valorização do capital humano com alto impacto perceptível.',
+    pain: 'Muitas empresas perdem a chance de fidelizar a equipe por não oferecerem benefícios de alta percepção.',
+    value:
+      'A TFC estrutura planos odontológicos focados em retenção de talentos e gestão de benefícios eficientes que não oneram a folha.',
+  },
+  Patrimonial: {
+    hook: 'Nossa consultoria é focada na continuidade de negócios e proteção de balanço financeiro.',
+    pain: 'Uma interrupção operacional imprevista pode quebrar o caixa de operações que não possuem compliance adequado de apólices.',
+    value:
+      'Realizamos uma varredura de exposição de riscos e desenhamos uma blindagem jurídica e continuidade de negócios garantindo a solidez corporativa.',
+  },
+  Frota: {
+    hook: 'Somos especialistas em otimização de custo logístico e proteção de ativos corporativos.',
+    pain: 'Veículos parados ou sinistros mal geridos representam aumento de custos operacionais e gargalos na entrega.',
+    value:
+      'A TFC implementa uma proteção de ativos e gestão de frotas com assistência corporativa 24h, reduzindo significativamente seu custo operacional.',
+  },
+  RC: {
+    hook: 'Atuamos com proteção patrimonial corporativa para sócios, diretores e operações complexas.',
+    pain: 'Processos judiciais e falhas em compliance estão em escalada, ameaçando o patrimônio da empresa e dos executivos.',
+    value:
+      'Estruturamos a blindagem jurídica legal e compliance através do Responsabilidade Civil, permitindo que a liderança atue sem exposição patrimonial.',
+  },
 }
 
 export default function Leads() {
@@ -305,6 +325,7 @@ function LeadsTable({
     <Card>
       <CardHeader className="pb-0">
         <CardTitle>Lista de Contatos</CardTitle>
+        <CardDescription>Gerencie seus clientes e leads importados.</CardDescription>
       </CardHeader>
       <CardContent className="pt-6">
         <div className="rounded-md border overflow-x-auto">
@@ -447,8 +468,6 @@ function LeadProfileSheet({ leadId }: { leadId: string }) {
 
   const [scriptType, setScriptType] = useState('Saúde')
   const [generatedScript, setGeneratedScript] = useState('')
-  const [scriptVariant, setScriptVariant] = useState(0)
-
   if (!lead) return null
 
   const handleSaveDetails = () => {
@@ -468,13 +487,22 @@ function LeadProfileSheet({ leadId }: { leadId: string }) {
   }
 
   const handleGenerateScript = () => {
-    const templates =
+    const template =
       SCRIPT_TEMPLATES[scriptType as keyof typeof SCRIPT_TEMPLATES] || SCRIPT_TEMPLATES['Saúde']
-    const text = templates[scriptVariant % templates.length]
-    setGeneratedScript(
-      `Olá, ${details.contactName || 'Contato'}. Aqui é ${me?.name}, da TFC Seguros Corporativos.\n\n${text}`,
-    )
-    setScriptVariant((v) => v + 1)
+
+    const script = `Olá, ${details.contactName || 'Contato'}. Aqui é ${me?.name}, da TFC Seguros Corporativos.
+
+${template.hook}
+
+Avaliando o cenário atual da ${lead.name}, identificamos um desafio comum no seu setor: ${template.pain}
+
+${template.value}
+
+O objetivo do nosso contato é agendar um Assessment Executivo de 15 minutos para mapear seu cenário e apresentar um modelo de mitigação de riscos.
+
+Como está sua disponibilidade para um call na próxima terça-feira pela manhã?`
+
+    setGeneratedScript(script)
   }
 
   const now = new Date().getTime()
@@ -588,8 +616,10 @@ function LeadProfileSheet({ leadId }: { leadId: string }) {
                 </SelectTrigger>
                 <SelectContent>
                   <SelectItem value="Saúde">Saúde</SelectItem>
+                  <SelectItem value="Odonto">Odonto</SelectItem>
                   <SelectItem value="Patrimonial">Patrimonial</SelectItem>
                   <SelectItem value="Frota">Frota</SelectItem>
+                  <SelectItem value="RC">RC</SelectItem>
                 </SelectContent>
               </Select>
             </div>
@@ -603,9 +633,6 @@ function LeadProfileSheet({ leadId }: { leadId: string }) {
                 {generatedScript}
               </div>
               <div className="flex justify-end gap-2">
-                <Button size="sm" variant="outline" onClick={handleGenerateScript}>
-                  <RefreshCw className="w-3 h-3 mr-1" /> Regerar
-                </Button>
                 <Button
                   size="sm"
                   onClick={() => {
@@ -613,7 +640,7 @@ function LeadProfileSheet({ leadId }: { leadId: string }) {
                     toast({ title: 'Copiado' })
                   }}
                 >
-                  Copiar
+                  <Copy className="w-4 h-4 mr-2" /> Copiar
                 </Button>
               </div>
             </div>
