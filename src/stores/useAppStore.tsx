@@ -215,6 +215,7 @@ interface AppStore {
   availableLeads: AvailableLead[]
   consultants: Consultant[]
   updateLeadStatus: (id: string, status: Status) => void
+  updateLeadConsultant: (id: string, consultantId: string) => void
   getConsultant: (id: string) => Consultant | undefined
   claimLead: (leadId: string) => void
 }
@@ -229,6 +230,10 @@ export function AppStoreProvider({ children }: { children: ReactNode }) {
 
   const updateLeadStatus = (id: string, status: Status) => {
     setLeads((prev) => prev.map((l) => (l.id === id ? { ...l, status } : l)))
+  }
+
+  const updateLeadConsultant = (id: string, consultantId: string) => {
+    setLeads((prev) => prev.map((l) => (l.id === id ? { ...l, consultantId } : l)))
   }
 
   const getConsultant = (id: string) => consultants.find((c) => c.id === id)
@@ -262,6 +267,7 @@ export function AppStoreProvider({ children }: { children: ReactNode }) {
         availableLeads,
         consultants,
         updateLeadStatus,
+        updateLeadConsultant,
         getConsultant,
         claimLead,
       },

@@ -69,7 +69,7 @@ export default function AvailableLeads() {
                     </TableCell>
                     <TableCell className="text-right">
                       <Button size="sm" onClick={() => handleClaim(lead.id, lead.name)}>
-                        Assumir Conta
+                        Vincular ao meu Login
                       </Button>
                     </TableCell>
                   </TableRow>

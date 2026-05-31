@@ -15,31 +15,31 @@ import { useToast } from '@/hooks/use-toast'
 import useAppStore from '@/stores/useAppStore'
 
 const SCRIPT_TEMPLATES = {
-  Saúde: {
+  'Saúde (Health)': {
     hook: 'Especialistas em blindagem e gestão de benefícios corporativos.',
     pain: 'A inflação médica e o alto turnover estão esmagando as margens das operações neste ano.',
     value:
       'Desenhamos uma arquitetura de Saúde que foca em retenção de talentos críticos enquanto aplicamos engenharia de redução de sinistralidade.',
   },
-  Odonto: {
+  'Odontológico (Dental)': {
     hook: 'Focados na valorização do capital humano com alto impacto perceptível.',
     pain: 'Muitas empresas perdem a chance de fidelizar a equipe por não oferecerem benefícios de alta percepção e baixo custo.',
     value:
       'A TFC estrutura planos odontológicos integrados que funcionam como alavanca de retenção de talentos sem onerar a folha.',
   },
-  Patrimonial: {
+  'Patrimonial (Property)': {
     hook: 'Consultoria focada em continuidade de negócios e proteção de balanço.',
     pain: 'Uma interrupção operacional imprevista (como danos elétricos ou incêndios) pode quebrar o caixa de operações que não têm apólices atualizadas.',
     value:
       'Realizamos uma varredura de exposição de riscos e desenhamos coberturas sob medida de Lucros Cessantes, garantindo a solidez do negócio.',
   },
-  'Automóveis/Frotas': {
+  'Automóveis/Frotas (Auto/Fleet)': {
     hook: 'Especialistas em otimização de custo logístico e mitigação de riscos de transporte.',
     pain: 'Veículos parados ou sinistros mal geridos representam gargalos gigantes na operação e atrasos na entrega.',
     value:
       'A TFC implementa uma gestão de frotas voltada à disponibilidade dos ativos, reduzindo o custo total de risco e agilizando as operações.',
   },
-  RC: {
+  'Responsabilidade Civil (RC)': {
     hook: 'Proteção patrimonial para sócios, diretores e para a operação como um todo.',
     pain: 'Processos judiciais trabalhistas, profissionais e de terceiros estão em escalada, ameaçando diretamente o patrimônio da empresa e dos executivos.',
     value:

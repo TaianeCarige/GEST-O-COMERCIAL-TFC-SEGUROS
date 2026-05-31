@@ -25,6 +25,9 @@ import {
   DropdownMenuLabel,
   DropdownMenuSeparator,
   DropdownMenuTrigger,
+  DropdownMenuSub,
+  DropdownMenuSubContent,
+  DropdownMenuSubTrigger,
 } from '@/components/ui/dropdown-menu'
 import {
   Dialog,
@@ -35,11 +38,12 @@ import {
   DialogFooter,
 } from '@/components/ui/dialog'
 import { useToast } from '@/hooks/use-toast'
-import { MoreHorizontal, Filter, Megaphone, HelpCircle } from 'lucide-react'
+import { MoreHorizontal, Filter, Megaphone, HelpCircle, UserPlus } from 'lucide-react'
 import { Link } from 'react-router-dom'
 
 export default function Leads() {
-  const { leads, updateLeadStatus, getConsultant, consultants, currentUser } = useAppStore()
+  const { leads, updateLeadStatus, updateLeadConsultant, getConsultant, consultants, currentUser } =
+    useAppStore()
   const { toast } = useToast()
 
   const me = consultants.find((c) => c.id === currentUser)
@@ -195,7 +199,7 @@ export default function Leads() {
                         {new Date(lead.lastContact).toLocaleDateString('pt-BR')}
                         {new Date(lead.lastContact) < ninetyDaysAgo && (
                           <span className="ml-2 text-xs text-destructive font-bold inline-flex items-center">
-                            <AlertTriangle className="w-3 h-3 mr-1" /> Crítico
+                            <AlertTriangle className="w-3 h-3 mr-1" /> Reativação Necessária
                           </span>
                         )}
                       </TableCell>
@@ -217,6 +221,29 @@ export default function Leads() {
                             <DropdownMenuItem onClick={() => updateLeadStatus(lead.id, 'Fechado')}>
                               Marcar Fechado
                             </DropdownMenuItem>
+
+                            {isManager && (
+                              <>
+                                <DropdownMenuSeparator />
+                                <DropdownMenuSub>
+                                  <DropdownMenuSubTrigger>
+                                    <UserPlus className="w-4 h-4 mr-2" /> Atribuir Lead
+                                  </DropdownMenuSubTrigger>
+                                  <DropdownMenuSubContent>
+                                    {consultants.map((c) => (
+                                      <DropdownMenuItem
+                                        key={c.id}
+                                        onClick={() => updateLeadConsultant(lead.id, c.id)}
+                                        className={lead.consultantId === c.id ? 'bg-muted' : ''}
+                                      >
+                                        {c.name} {lead.consultantId === c.id && '(Atual)'}
+                                      </DropdownMenuItem>
+                                    ))}
+                                  </DropdownMenuSubContent>
+                                </DropdownMenuSub>
+                              </>
+                            )}
+
                             <DropdownMenuSeparator />
                             <DropdownMenuItem
                               onClick={() => handleObjection(lead.id)}

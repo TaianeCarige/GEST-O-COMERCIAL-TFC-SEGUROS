@@ -276,7 +276,9 @@ export default function Index() {
           <CardHeader className="flex flex-row items-center justify-between pb-2">
             <div className="space-y-1">
               <CardTitle>Alerta de Retenção</CardTitle>
-              <CardDescription>Ação imediata necessária (+90 dias)</CardDescription>
+              <CardDescription className="text-destructive font-medium">
+                Reativação Necessária (+90 dias)
+              </CardDescription>
             </div>
             <Button variant="ghost" size="icon" asChild>
               <Link to="/reactivation">

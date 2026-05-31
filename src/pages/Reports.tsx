@@ -35,9 +35,12 @@ export default function Reports() {
           : 0
 
       // Avanço de Funil (Leads that are in negotiation or scheduled)
-      const funnelAdvancement = consultantLeads.filter(
+      const advancedLeads = consultantLeads.filter(
         (l) => l.status === 'Em Negociação' || l.status === 'Agendado' || l.status === 'Fechado',
       ).length
+
+      const funnelAdvancementRate =
+        consultantLeads.length > 0 ? Math.round((advancedLeads / consultantLeads.length) * 100) : 0
 
       // Determine bottlenecks (Gargalos)
       const bottlenecks = []
@@ -59,6 +62,7 @@ export default function Reports() {
         totalContacts: consultantLeads.length,
         closedDeals: closedLeads.length,
         conversionRate,
+        funnelAdvancementRate,
         bottlenecks,
       }
     })
@@ -98,8 +102,8 @@ export default function Reports() {
                 <TableRow>
                   <TableHead>Consultor</TableHead>
                   <TableHead className="text-center">Contatados</TableHead>
-                  <TableHead className="text-center">Avanço no Funil</TableHead>
-                  <TableHead className="text-center">Taxa Conversão</TableHead>
+                  <TableHead className="text-center">Avanço de Funil</TableHead>
+                  <TableHead className="text-center">Taxa de Conversão</TableHead>
                   <TableHead>Diagnóstico (Gargalos)</TableHead>
                 </TableRow>
               </TableHeader>
@@ -108,7 +112,9 @@ export default function Reports() {
                   <TableRow key={c.id}>
                     <TableCell className="font-medium">{c.name}</TableCell>
                     <TableCell className="text-center">{c.totalContacts}</TableCell>
-                    <TableCell className="text-center">{c.funnelAdvancement}</TableCell>
+                    <TableCell className="text-center">
+                      <Badge variant="outline">{c.funnelAdvancementRate}%</Badge>
+                    </TableCell>
                     <TableCell className="text-center">
                       <Badge
                         variant={
