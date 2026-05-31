@@ -44,7 +44,7 @@ export function AppSidebar() {
   const location = useLocation()
   const { consultants, currentUser } = useAppStore()
   const me = consultants.find((c) => c.id === currentUser)
-  const isManager = me?.role === 'Gestora'
+  const isManager = me?.role === 'Gestora' || me?.role === 'Agência'
 
   const navItems = [
     { name: 'Dashboard', path: '/', icon: LayoutDashboard, show: true },

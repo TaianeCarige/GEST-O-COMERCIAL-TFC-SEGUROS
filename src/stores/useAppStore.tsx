@@ -1,7 +1,17 @@
 import React, { createContext, useContext, useState, ReactNode } from 'react'
 
-export type Branch = 'Automóveis/Frotas' | 'Saúde' | 'Vida' | 'Odonto' | 'RC' | 'Patrimonial'
+export type Branch =
+  | 'Automóveis/Frotas'
+  | 'Saúde'
+  | 'Vida'
+  | 'Odonto'
+  | 'RC'
+  | 'Patrimonial'
+  | 'Outros'
 export type Status =
+  | 'Prospecção'
+  | 'Cotação'
+  | 'Fechamento'
   | 'Visita Pendente'
   | 'Agendado'
   | 'Em Negociação'
@@ -9,13 +19,25 @@ export type Status =
   | 'Perdido'
   | 'Objeção'
 
-export type Role = 'Gestora' | 'Consultor'
+export type Role = 'Agência' | 'Gestora' | 'Consultor'
+
+export type PolicyType =
+  | 'Automóvel'
+  | 'Frota'
+  | 'Saúde'
+  | 'Dental'
+  | 'Vida Funcionários'
+  | 'Vida Individual'
+  | 'Responsabilidade Civil'
+  | 'Seguros Patrimoniais'
+  | 'Outros'
 
 export interface Consultant {
   id: string
   name: string
   color: string
   role: Role
+  managerId?: string
   callsGoal: number
   callsRealized: number
   visitsGoal: number
@@ -24,15 +46,36 @@ export interface Consultant {
   salesRealized: number
 }
 
+export interface Policy {
+  id: string
+  type: PolicyType
+  expirationDate: string
+}
+
+export interface Interaction {
+  id: string
+  date: string
+  userId: string
+  userName: string
+  note: string
+  newStatus: Status
+}
+
 export interface Lead {
   id: string
   name: string
+  cnpj?: string
+  industry?: string
+  contactName?: string
+  contactPhone?: string
   branch: Branch
   status: Status
   lastContact: string
   consultantId: string
   value: number
   scheduledDate?: string
+  policies: Policy[]
+  history: Interaction[]
 }
 
 export interface AvailableLead {
@@ -56,7 +99,20 @@ const MOCK_CONSULTANTS: Consultant[] = [
     id: '1',
     name: 'Taiane',
     color: 'hsl(var(--chart-1))',
+    role: 'Agência',
+    callsGoal: 0,
+    callsRealized: 0,
+    visitsGoal: 0,
+    visitsRealized: 0,
+    salesGoal: 0,
+    salesRealized: 0,
+  },
+  {
+    id: '2',
+    name: 'Carlos',
+    color: 'hsl(var(--chart-2))',
     role: 'Gestora',
+    managerId: '1',
     callsGoal: 100,
     callsRealized: 110,
     visitsGoal: 20,
@@ -65,22 +121,11 @@ const MOCK_CONSULTANTS: Consultant[] = [
     salesRealized: 45000,
   },
   {
-    id: '2',
-    name: 'Carlos',
-    color: 'hsl(var(--chart-2))',
-    role: 'Consultor',
-    callsGoal: 80,
-    callsRealized: 85,
-    visitsGoal: 15,
-    visitsRealized: 18,
-    salesGoal: 40000,
-    salesRealized: 52000,
-  },
-  {
     id: '3',
     name: 'Mariana',
     color: 'hsl(var(--chart-3))',
     role: 'Consultor',
+    managerId: '2',
     callsGoal: 90,
     callsRealized: 60,
     visitsGoal: 18,
@@ -88,47 +133,84 @@ const MOCK_CONSULTANTS: Consultant[] = [
     salesGoal: 45000,
     salesRealized: 20000,
   },
+  {
+    id: '4',
+    name: 'João',
+    color: 'hsl(var(--chart-4))',
+    role: 'Consultor',
+    managerId: '2',
+    callsGoal: 80,
+    callsRealized: 75,
+    visitsGoal: 15,
+    visitsRealized: 12,
+    salesGoal: 30000,
+    salesRealized: 25000,
+  },
 ]
 
 const MOCK_LEADS: Lead[] = [
   {
     id: 'l1',
     name: 'TechCorp SA',
+    cnpj: '12.345.678/0001-90',
+    industry: 'Tecnologia',
+    contactName: 'Ana Silva',
+    contactPhone: '(11) 99999-1111',
     branch: 'Saúde',
-    status: 'Agendado',
+    status: 'Cotação',
     lastContact: getDaysAgo(5),
-    consultantId: '1',
+    consultantId: '3',
     value: 15000,
     scheduledDate: now.toISOString(),
+    policies: [{ id: 'p1', type: 'Saúde', expirationDate: getDaysAhead(20) }],
+    history: [
+      {
+        id: 'h1',
+        date: getDaysAgo(5),
+        userId: '3',
+        userName: 'Mariana',
+        note: 'Apresentação enviada e cotação em andamento.',
+        newStatus: 'Cotação',
+      },
+    ],
   },
   {
     id: 'l2',
     name: 'Logística Alfa',
+    cnpj: '98.765.432/0001-10',
+    industry: 'Logística',
+    contactName: 'Carlos Souza',
+    contactPhone: '(11) 98888-2222',
     branch: 'Automóveis/Frotas',
-    status: 'Visita Pendente',
-    lastContact: getDaysAgo(2),
-    consultantId: '2',
+    status: 'Prospecção',
+    lastContact: getDaysAgo(95),
+    consultantId: '4',
     value: 25000,
-    scheduledDate: now.toISOString(),
+    policies: [],
+    history: [],
   },
   {
     id: 'l3',
     name: 'Indústrias Sigma',
     branch: 'Patrimonial',
-    status: 'Em Negociação',
-    lastContact: getDaysAgo(95),
-    consultantId: '1',
+    status: 'Fechamento',
+    lastContact: getDaysAgo(2),
+    consultantId: '3',
     value: 85000,
+    policies: [{ id: 'p3', type: 'Seguros Patrimoniais', expirationDate: getDaysAhead(150) }],
+    history: [],
   },
   {
     id: 'l4',
     name: 'Construtora Beta',
     branch: 'RC',
-    status: 'Visita Pendente',
+    status: 'Prospecção',
     lastContact: getDaysAgo(110),
-    consultantId: '3',
+    consultantId: '4',
     value: 30000,
     scheduledDate: getDaysAhead(1),
+    policies: [{ id: 'p4', type: 'Responsabilidade Civil', expirationDate: getDaysAhead(10) }],
+    history: [],
   },
   {
     id: 'l5',
@@ -138,34 +220,8 @@ const MOCK_LEADS: Lead[] = [
     lastContact: getDaysAgo(10),
     consultantId: '2',
     value: 5000,
-  },
-  {
-    id: 'l6',
-    name: 'Varejo Central',
-    branch: 'Vida',
-    status: 'Agendado',
-    lastContact: getDaysAgo(15),
-    consultantId: '3',
-    value: 12000,
-    scheduledDate: getDaysAhead(3),
-  },
-  {
-    id: 'l7',
-    name: 'Transportes Rápidos',
-    branch: 'Automóveis/Frotas',
-    status: 'Perdido',
-    lastContact: getDaysAgo(40),
-    consultantId: '1',
-    value: 45000,
-  },
-  {
-    id: 'l8',
-    name: 'Hospital Vida',
-    branch: 'RC',
-    status: 'Visita Pendente',
-    lastContact: getDaysAgo(88),
-    consultantId: '2',
-    value: 60000,
+    policies: [],
+    history: [],
   },
 ]
 
@@ -188,24 +244,6 @@ const MOCK_AVAILABLE_LEADS: AvailableLead[] = [
     role: 'CEO',
     value: 120000,
   },
-  {
-    id: 'a3',
-    name: 'Transportadora Global',
-    branch: 'Automóveis/Frotas',
-    revenue: 'R$ 50M - 100M',
-    contact: 'Marcos',
-    role: 'Gerente de Logística',
-    value: 50000,
-  },
-  {
-    id: 'a4',
-    name: 'Clínica Saúde Plena',
-    branch: 'RC',
-    revenue: 'R$ 5M - 10M',
-    contact: 'Dra. Ana',
-    role: 'Sócia',
-    value: 15000,
-  },
 ]
 
 interface AppStore {
@@ -218,12 +256,15 @@ interface AppStore {
   updateLeadConsultant: (id: string, consultantId: string) => void
   getConsultant: (id: string) => Consultant | undefined
   claimLead: (leadId: string) => void
+  updateLeadDetails: (id: string, details: Partial<Lead>) => void
+  addPolicy: (leadId: string, policy: Omit<Policy, 'id'>) => void
+  addInteraction: (leadId: string, note: string, newStatus: Status) => void
 }
 
 const AppContext = createContext<AppStore | undefined>(undefined)
 
 export function AppStoreProvider({ children }: { children: ReactNode }) {
-  const [currentUser, setCurrentUser] = useState<string>('1') // Default to Manager (Taiane)
+  const [currentUser, setCurrentUser] = useState<string>('1')
   const [leads, setLeads] = useState<Lead[]>(MOCK_LEADS)
   const [availableLeads, setAvailableLeads] = useState<AvailableLead[]>(MOCK_AVAILABLE_LEADS)
   const [consultants] = useState<Consultant[]>(MOCK_CONSULTANTS)
@@ -248,13 +289,56 @@ export function AppStoreProvider({ children }: { children: ReactNode }) {
           id: `claimed-${leadId}-${Date.now()}`,
           name: leadToClaim.name,
           branch: leadToClaim.branch,
-          status: 'Visita Pendente',
+          status: 'Prospecção',
           lastContact: new Date().toISOString(),
           consultantId: currentUser,
           value: leadToClaim.value,
+          policies: [],
+          history: [],
         },
       ])
     }
+  }
+
+  const updateLeadDetails = (id: string, details: Partial<Lead>) => {
+    setLeads((prev) => prev.map((l) => (l.id === id ? { ...l, ...details } : l)))
+  }
+
+  const addPolicy = (leadId: string, policy: Omit<Policy, 'id'>) => {
+    setLeads((prev) =>
+      prev.map((l) => {
+        if (l.id === leadId) {
+          return { ...l, policies: [...(l.policies || []), { ...policy, id: `p-${Date.now()}` }] }
+        }
+        return l
+      }),
+    )
+  }
+
+  const addInteraction = (leadId: string, note: string, newStatus: Status) => {
+    const me = consultants.find((c) => c.id === currentUser)
+    if (!me) return
+    const interaction: Interaction = {
+      id: `h-${Date.now()}`,
+      date: new Date().toISOString(),
+      userId: me.id,
+      userName: me.name,
+      note,
+      newStatus,
+    }
+    setLeads((prev) =>
+      prev.map((l) => {
+        if (l.id === leadId) {
+          return {
+            ...l,
+            status: newStatus,
+            lastContact: interaction.date,
+            history: [interaction, ...(l.history || [])],
+          }
+        }
+        return l
+      }),
+    )
   }
 
   return React.createElement(
@@ -270,6 +354,9 @@ export function AppStoreProvider({ children }: { children: ReactNode }) {
         updateLeadConsultant,
         getConsultant,
         claimLead,
+        updateLeadDetails,
+        addPolicy,
+        addInteraction,
       },
     },
     children,

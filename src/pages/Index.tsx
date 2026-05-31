@@ -1,77 +1,46 @@
-import React, { useState } from 'react'
+import React from 'react'
 import useAppStore from '@/stores/useAppStore'
-import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card'
-import {
-  Table,
-  TableBody,
-  TableCell,
-  TableHead,
-  TableHeader,
-  TableRow,
-} from '@/components/ui/table'
-import { Button } from '@/components/ui/button'
+import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { Badge } from '@/components/ui/badge'
-import {
-  Dialog,
-  DialogContent,
-  DialogDescription,
-  DialogHeader,
-  DialogTitle,
-} from '@/components/ui/dialog'
-import { ChartContainer, ChartTooltip, ChartTooltipContent } from '@/components/ui/chart'
-import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Legend } from 'recharts'
-import { DollarSign, Clock, AlertTriangle, Briefcase, ChevronRight } from 'lucide-react'
+import { DollarSign, AlertTriangle, Clock, ChevronRight } from 'lucide-react'
 import { Link } from 'react-router-dom'
 
 export default function Index() {
-  const { leads, consultants, currentUser, getConsultant } = useAppStore()
-  const [briefingOpen, setBriefingOpen] = useState(false)
-  const [selectedLead, setSelectedLead] = useState<string>('')
+  const { leads, consultants, currentUser } = useAppStore()
 
-  const me = getConsultant(currentUser)
-  const isManager = me?.role === 'Gestora'
+  const me = consultants.find((c) => c.id === currentUser)
+  const isAgency = me?.role === 'Agência'
+  const isManager = me?.role === 'Gestora' || isAgency
 
-  const visibleLeads = isManager ? leads : leads.filter((l) => l.consultantId === currentUser)
-  const visibleConsultants = isManager
-    ? consultants
-    : consultants.filter((c) => c.id === currentUser)
+  const visibleLeads = isAgency
+    ? leads
+    : isManager
+      ? leads.filter(
+          (l) =>
+            consultants.find((c) => c.id === l.consultantId)?.managerId === me?.id ||
+            l.consultantId === me?.id,
+        )
+      : leads.filter((l) => l.consultantId === currentUser)
 
-  const totalSales = isManager
-    ? visibleLeads.filter((l) => l.status === 'Fechado').reduce((sum, l) => sum + l.value, 0)
-    : me?.salesRealized || 0
-
-  const pendingVisitsCount = visibleLeads.filter(
-    (l) => l.status === 'Visita Pendente' || l.status === 'Agendado',
+  const totalSales = visibleLeads
+    .filter((l) => ['Fechado', 'Fechamento'].includes(l.status))
+    .reduce((sum, l) => sum + l.value, 0)
+  const inPipelineCount = visibleLeads.filter((l) =>
+    ['Cotação', 'Fechamento'].includes(l.status),
   ).length
 
-  const ninetyDaysAgo = new Date()
-  ninetyDaysAgo.setDate(ninetyDaysAgo.getDate() - 90)
-  const retentionAlerts = visibleLeads.filter((l) => new Date(l.lastContact) < ninetyDaysAgo)
+  const now = new Date().getTime()
 
-  const todayStr = new Date().toISOString().split('T')[0]
-  const todayVisits = visibleLeads.filter(
-    (l) => l.scheduledDate && l.scheduledDate.startsWith(todayStr),
+  const expiringPoliciesLeads = visibleLeads.filter((l) =>
+    l.policies?.some((p) => {
+      const diff = new Date(p.expirationDate).getTime() - now
+      return diff > 0 && diff <= 30 * 24 * 60 * 60 * 1000
+    }),
   )
 
-  const handleBriefing = (leadName: string) => {
-    setSelectedLead(leadName)
-    setBriefingOpen(true)
-  }
-
-  const chartData = visibleConsultants.map((c) => ({
-    name: c.name,
-    'Ligações Realizadas': c.callsRealized,
-    'Meta Ligações': c.callsGoal,
-    'Visitas Realizadas': c.visitsRealized,
-    'Meta Visitas': c.visitsGoal,
-  }))
-
-  const chartConfig = {
-    'Ligações Realizadas': { color: 'hsl(var(--chart-1))' },
-    'Meta Ligações': { color: 'hsl(var(--muted-foreground))' },
-    'Visitas Realizadas': { color: 'hsl(var(--chart-2))' },
-    'Meta Visitas': { color: 'hsl(var(--muted-foreground))' },
-  }
+  const retentionAlerts = visibleLeads.filter(
+    (l) => now - new Date(l.lastContact).getTime() >= 90 * 24 * 60 * 60 * 1000,
+  )
 
   return (
     <div className="space-y-6">
@@ -79,216 +48,123 @@ export default function Index() {
         <div>
           <h1 className="text-3xl font-bold tracking-tight">Dashboard Comercial</h1>
           <p className="text-muted-foreground mt-1">
-            Visualização de {isManager ? 'toda a equipe' : 'sua carteira pessoal'}
+            {isAgency
+              ? 'Visão global da agência'
+              : isManager
+                ? 'Visão da equipe'
+                : 'Sua performance pessoal'}
           </p>
         </div>
       </div>
 
-      {!isManager && (
-        <div className="grid gap-4 md:grid-cols-3 mb-6">
-          <Card className="hover:shadow-md transition-shadow">
-            <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-              <CardTitle className="text-sm font-medium">Meta de Ligações</CardTitle>
-            </CardHeader>
-            <CardContent>
-              <div className="text-2xl font-bold">
-                {me?.callsRealized} / {me?.callsGoal}
-              </div>
-              <div className="mt-3 space-y-1">
-                <div className="flex items-center justify-between text-xs text-muted-foreground">
-                  <span>Progresso</span>
-                  <span>
-                    {Math.min(
-                      Math.round(((me?.callsRealized || 0) / (me?.callsGoal || 1)) * 100),
-                      100,
-                    )}
-                    %
-                  </span>
-                </div>
-                <div className="w-full bg-secondary h-2 rounded-full overflow-hidden">
-                  <div
-                    className="bg-primary h-full transition-all"
-                    style={{
-                      width: `${Math.min(Math.round(((me?.callsRealized || 0) / (me?.callsGoal || 1)) * 100), 100)}%`,
-                    }}
-                  />
-                </div>
-              </div>
-            </CardContent>
-          </Card>
-          <Card className="hover:shadow-md transition-shadow">
-            <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-              <CardTitle className="text-sm font-medium">Meta de Visitas</CardTitle>
-            </CardHeader>
-            <CardContent>
-              <div className="text-2xl font-bold">
-                {me?.visitsRealized} / {me?.visitsGoal}
-              </div>
-              <div className="mt-3 space-y-1">
-                <div className="flex items-center justify-between text-xs text-muted-foreground">
-                  <span>Progresso</span>
-                  <span>
-                    {Math.min(
-                      Math.round(((me?.visitsRealized || 0) / (me?.visitsGoal || 1)) * 100),
-                      100,
-                    )}
-                    %
-                  </span>
-                </div>
-                <div className="w-full bg-secondary h-2 rounded-full overflow-hidden">
-                  <div
-                    className="bg-accent h-full transition-all"
-                    style={{
-                      width: `${Math.min(Math.round(((me?.visitsRealized || 0) / (me?.visitsGoal || 1)) * 100), 100)}%`,
-                    }}
-                  />
-                </div>
-              </div>
-            </CardContent>
-          </Card>
-          <Card className="hover:shadow-md transition-shadow">
-            <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-              <CardTitle className="text-sm font-medium">Meta de Vendas</CardTitle>
-            </CardHeader>
-            <CardContent>
-              <div className="text-2xl font-bold text-success">
-                {new Intl.NumberFormat('pt-BR', {
-                  style: 'currency',
-                  currency: 'BRL',
-                  maximumFractionDigits: 0,
-                }).format(totalSales)}
-              </div>
-              <div className="mt-3 space-y-1">
-                <div className="flex items-center justify-between text-xs text-muted-foreground">
-                  <span>
-                    Meta:{' '}
-                    {new Intl.NumberFormat('pt-BR', {
-                      style: 'currency',
-                      currency: 'BRL',
-                      maximumFractionDigits: 0,
-                    }).format(me?.salesGoal || 0)}
-                  </span>
-                  <span>
-                    {Math.min(Math.round((totalSales / (me?.salesGoal || 1)) * 100), 100)}%
-                  </span>
-                </div>
-                <div className="w-full bg-secondary h-2 rounded-full overflow-hidden">
-                  <div
-                    className="bg-success h-full transition-all"
-                    style={{
-                      width: `${Math.min(Math.round((totalSales / (me?.salesGoal || 1)) * 100), 100)}%`,
-                    }}
-                  />
-                </div>
-              </div>
-            </CardContent>
-          </Card>
-        </div>
-      )}
-
-      <div className="grid gap-4 md:grid-cols-3">
-        {isManager && (
-          <Card className="hover:shadow-md transition-shadow">
-            <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-              <CardTitle className="text-sm font-medium">Progresso de Vendas (Mês)</CardTitle>
-              <DollarSign className="h-4 w-4 text-success" />
-            </CardHeader>
-            <CardContent>
-              <div className="text-2xl font-bold text-success">
-                {new Intl.NumberFormat('pt-BR', { style: 'currency', currency: 'BRL' }).format(
-                  totalSales,
-                )}
-              </div>
-              <p className="text-xs text-muted-foreground mt-1">+12% em relação ao mês anterior</p>
-            </CardContent>
-          </Card>
-        )}
+      <div className="grid gap-4 md:grid-cols-4">
         <Card className="hover:shadow-md transition-shadow">
           <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-            <CardTitle className="text-sm font-medium">Visitas Pendentes / Agendadas</CardTitle>
+            <CardTitle className="text-sm font-medium">Volume em Fechamento</CardTitle>
+            <DollarSign className="h-4 w-4 text-success" />
+          </CardHeader>
+          <CardContent>
+            <div className="text-2xl font-bold text-success">
+              {new Intl.NumberFormat('pt-BR', {
+                style: 'currency',
+                currency: 'BRL',
+                maximumFractionDigits: 0,
+              }).format(totalSales)}
+            </div>
+            <p className="text-xs text-muted-foreground mt-1">Negócios fechados ou na reta final</p>
+          </CardContent>
+        </Card>
+
+        <Card className="hover:shadow-md transition-shadow">
+          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+            <CardTitle className="text-sm font-medium">Pipeline Ativo</CardTitle>
             <Clock className="h-4 w-4 text-accent" />
           </CardHeader>
           <CardContent>
-            <div className="text-2xl font-bold">{pendingVisitsCount}</div>
-            <p className="text-xs text-muted-foreground mt-1">Foco na conversão</p>
+            <div className="text-2xl font-bold">{inPipelineCount} leads</div>
+            <p className="text-xs text-muted-foreground mt-1">Em fase de Cotação/Fechamento</p>
           </CardContent>
         </Card>
+
+        <Card className="hover:shadow-md transition-shadow border-amber-500/20">
+          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+            <CardTitle className="text-sm font-medium text-amber-500">
+              Renovações Próximas
+            </CardTitle>
+            <AlertTriangle className="h-4 w-4 text-amber-500" />
+          </CardHeader>
+          <CardContent>
+            <div className="text-2xl font-bold text-amber-500">
+              {expiringPoliciesLeads.length} apólices
+            </div>
+            <p className="text-xs text-muted-foreground mt-1">Vencimento em menos de 30 dias</p>
+          </CardContent>
+        </Card>
+
         <Card className="hover:shadow-md transition-shadow border-destructive/20">
           <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
             <CardTitle className="text-sm font-medium text-destructive">
-              Alertas de Retenção (90+ dias)
+              Contatos Inativos
             </CardTitle>
             <AlertTriangle className="h-4 w-4 text-destructive" />
           </CardHeader>
           <CardContent>
-            <div className="text-2xl font-bold text-destructive">{retentionAlerts.length}</div>
-            <p className="text-xs text-muted-foreground mt-1">Risco de perda de base</p>
+            <div className="text-2xl font-bold text-destructive">
+              {retentionAlerts.length} clientes
+            </div>
+            <p className="text-xs text-muted-foreground mt-1">Mais de 90 dias sem contato</p>
           </CardContent>
         </Card>
       </div>
 
-      <div className="grid gap-6 md:grid-cols-7">
-        <Card className="md:col-span-4">
-          <CardHeader>
-            <CardTitle>Clientes para Visitar Hoje</CardTitle>
-            <CardDescription>Prioridade máxima para o time comercial.</CardDescription>
+      <div className="grid gap-6 md:grid-cols-2">
+        <Card>
+          <CardHeader className="flex flex-row items-center justify-between pb-2">
+            <div className="space-y-1">
+              <CardTitle>Alerta de Renovações</CardTitle>
+              <CardDescription>Apólices expirando em até 30 dias</CardDescription>
+            </div>
           </CardHeader>
           <CardContent>
-            {todayVisits.length > 0 ? (
-              <Table>
-                <TableHeader>
-                  <TableRow>
-                    <TableHead>Cliente</TableHead>
-                    {isManager && <TableHead>Consultor</TableHead>}
-                    <TableHead>Status</TableHead>
-                    <TableHead className="text-right">Ação</TableHead>
-                  </TableRow>
-                </TableHeader>
-                <TableBody>
-                  {todayVisits.map((lead) => (
-                    <TableRow key={lead.id}>
-                      <TableCell className="font-medium">{lead.name}</TableCell>
-                      {isManager && <TableCell>{getConsultant(lead.consultantId)?.name}</TableCell>}
-                      <TableCell>
-                        <Badge variant={lead.status === 'Agendado' ? 'default' : 'secondary'}>
-                          {lead.status}
-                        </Badge>
-                      </TableCell>
-                      <TableCell className="text-right">
-                        <Button size="sm" onClick={() => handleBriefing(lead.name)}>
-                          Preparar Briefing
-                        </Button>
-                      </TableCell>
-                    </TableRow>
-                  ))}
-                </TableBody>
-              </Table>
-            ) : (
-              <div className="text-center py-10 text-muted-foreground flex flex-col items-center">
-                <Briefcase className="h-10 w-10 mb-3 opacity-20" />
-                <p>Não há visitas agendadas para hoje nesta visão.</p>
-              </div>
-            )}
+            <div className="space-y-4 mt-2">
+              {expiringPoliciesLeads.slice(0, 5).map((lead) => (
+                <div
+                  key={lead.id}
+                  className="flex items-center justify-between border-b pb-2 last:border-0 last:pb-0"
+                >
+                  <div>
+                    <p className="font-medium text-sm">{lead.name}</p>
+                    <p className="text-xs text-muted-foreground">{lead.branch}</p>
+                  </div>
+                  <Badge variant="outline" className="border-amber-500 text-amber-500">
+                    Ação Necessária
+                  </Badge>
+                </div>
+              ))}
+              {expiringPoliciesLeads.length === 0 && (
+                <p className="text-sm text-muted-foreground text-center py-4">
+                  Nenhuma apólice expirando próximo.
+                </p>
+              )}
+            </div>
           </CardContent>
         </Card>
 
-        <Card className="md:col-span-3">
+        <Card>
           <CardHeader className="flex flex-row items-center justify-between pb-2">
             <div className="space-y-1">
-              <CardTitle>Alerta de Retenção</CardTitle>
-              <CardDescription className="text-destructive font-medium">
-                Reativação Imediata (+90 dias)
-              </CardDescription>
+              <CardTitle>Inatividade (+90 dias)</CardTitle>
+              <CardDescription>Oportunidades de reativação</CardDescription>
             </div>
             <Button variant="ghost" size="icon" asChild>
-              <Link to="/reactivation">
+              <Link to="/leads">
                 <ChevronRight className="h-5 w-5" />
               </Link>
             </Button>
           </CardHeader>
           <CardContent>
             <div className="space-y-4 mt-2">
-              {retentionAlerts.slice(0, 4).map((alert) => (
+              {retentionAlerts.slice(0, 5).map((alert) => (
                 <div
                   key={alert.id}
                   className="flex items-center justify-between border-b pb-2 last:border-0 last:pb-0"
@@ -296,16 +172,11 @@ export default function Index() {
                   <div>
                     <p className="font-medium text-sm">{alert.name}</p>
                     <p className="text-xs text-muted-foreground">
-                      {alert.branch}{' '}
-                      {isManager && `• Consultor: ${getConsultant(alert.consultantId)?.name}`}
+                      Últ. Contato: {new Date(alert.lastContact).toLocaleDateString('pt-BR')}
                     </p>
                   </div>
                   <Badge variant="destructive" className="text-[10px]">
-                    {Math.floor(
-                      (new Date().getTime() - new Date(alert.lastContact).getTime()) /
-                        (1000 * 3600 * 24),
-                    )}{' '}
-                    dias
+                    Perigo de Base
                   </Badge>
                 </div>
               ))}
@@ -318,72 +189,6 @@ export default function Index() {
           </CardContent>
         </Card>
       </div>
-
-      <Card>
-        <CardHeader>
-          <CardTitle>Desempenho de Atividades vs Metas</CardTitle>
-          <CardDescription>Acompanhamento de ligações e visitas</CardDescription>
-        </CardHeader>
-        <CardContent>
-          <ChartContainer config={chartConfig} className="h-[350px] w-full">
-            <BarChart data={chartData} margin={{ top: 20, right: 20, left: -20, bottom: 0 }}>
-              <CartesianGrid strokeDasharray="3 3" vertical={false} />
-              <XAxis dataKey="name" />
-              <YAxis />
-              <ChartTooltip content={<ChartTooltipContent />} />
-              <Legend verticalAlign="top" height={36} />
-              <Bar
-                dataKey="Ligações Realizadas"
-                fill="var(--color-Ligações Realizadas)"
-                radius={[4, 4, 0, 0]}
-              />
-              <Bar
-                dataKey="Meta Ligações"
-                fill="var(--color-Meta Ligações)"
-                radius={[4, 4, 0, 0]}
-                opacity={0.3}
-              />
-              <Bar
-                dataKey="Visitas Realizadas"
-                fill="var(--color-Visitas Realizadas)"
-                radius={[4, 4, 0, 0]}
-              />
-              <Bar
-                dataKey="Meta Visitas"
-                fill="var(--color-Meta Visitas)"
-                radius={[4, 4, 0, 0]}
-                opacity={0.3}
-              />
-            </BarChart>
-          </ChartContainer>
-        </CardContent>
-      </Card>
-
-      <Dialog open={briefingOpen} onOpenChange={setBriefingOpen}>
-        <DialogContent>
-          <DialogHeader>
-            <DialogTitle>Inteligência B2B</DialogTitle>
-            <DialogDescription>Briefing para {selectedLead}</DialogDescription>
-          </DialogHeader>
-          <div className="py-6 flex flex-col items-center justify-center space-y-4 text-center">
-            <div className="h-12 w-12 rounded-full bg-accent/10 flex items-center justify-center">
-              <Briefcase className="h-6 w-6 text-accent" />
-            </div>
-            <p className="text-lg font-medium">
-              Prepare-se com o Expert de Inteligência B2B para esta reunião.
-            </p>
-            <p className="text-sm text-muted-foreground">
-              O sistema analisou o histórico do cliente e sugere focar em oportunidades de
-              cross-selling para o ramo de Vida e Saúde.
-            </p>
-          </div>
-          <div className="flex justify-end">
-            <Button asChild>
-              <Link to={`/b2b-expert?sector=${encodeURIComponent('Saúde')}`}>Acessar Expert</Link>
-            </Button>
-          </div>
-        </DialogContent>
-      </Dialog>
     </div>
   )
 }

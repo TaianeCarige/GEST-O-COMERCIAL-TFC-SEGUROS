@@ -79,12 +79,14 @@ const SCRIPT_TEMPLATES = {
       pain: 'Sabemos que a inflação médica e a dificuldade na retenção de talentos estão esmagando as margens das operações neste ano.',
       value:
         'Desenhamos uma arquitetura de Saúde focada na retenção de talentos críticos e gestão de benefícios, enquanto aplicamos engenharia de redução de sinistralidade.',
+      cta: 'O objetivo do nosso contato é agendar um Assessment Executivo de 15 minutos para mapear seu cenário e apresentar um modelo de mitigação de riscos. Como está sua disponibilidade para um call na próxima terça-feira pela manhã?',
     },
     {
       hook: 'Atuamos como parceiros estratégicos na otimização de custos com saúde corporativa.',
       pain: 'O aumento descontrolado de custos com planos de saúde tem impactado diretamente o EBITDA das grandes operações.',
       value:
         'Implementamos modelos preditivos de gestão de saúde que garantem a sustentabilidade do benefício sem perda de qualidade para o colaborador.',
+      cta: 'Gostaria de compartilhar um case rápido de 10 minutos sobre como reduzimos o custo de uma empresa do seu setor. Tem agenda livre na quinta-feira à tarde?',
     },
   ],
   Odonto: [
@@ -93,12 +95,14 @@ const SCRIPT_TEMPLATES = {
       pain: 'Muitas empresas perdem a chance de fidelizar a equipe por não oferecerem benefícios de alta percepção.',
       value:
         'A TFC estrutura planos odontológicos focados em retenção de talentos e gestão de benefícios eficientes que não oneram a folha.',
+      cta: 'Podemos agendar uma rápida conversa de 15 minutos na próxima semana para eu te mostrar como implementar isso com custo zero para a empresa?',
     },
     {
       hook: 'Nosso foco é ampliar o pacote de benefícios corporativos com inteligência financeira.',
       pain: 'A dificuldade em atrair e reter talentos muitas vezes está atrelada à falta de um pacote de benefícios competitivo.',
       value:
         'Desenhamos soluções odontológicas premium que elevam o moral da equipe e mantêm o equilíbrio do fluxo de caixa.',
+      cta: 'Que tal uma breve call amanhã para entendermos o seu momento atual de benefícios?',
     },
   ],
   Patrimonial: [
@@ -107,12 +111,14 @@ const SCRIPT_TEMPLATES = {
       pain: 'Uma interrupção operacional imprevista pode quebrar o caixa de operações que não possuem compliance adequado de apólices.',
       value:
         'Realizamos uma varredura de exposição a riscos e desenhamos uma blindagem jurídica e continuidade de negócios garantindo a solidez corporativa.',
+      cta: 'Gostaria de agendar 15 minutos para apresentar nosso modelo de varredura de riscos. Qual o melhor horário para você na próxima semana?',
     },
     {
       hook: 'Somos especialistas na proteção de ativos críticos e mitigação de riscos empresariais.',
       pain: 'A exposição a riscos não mapeados frequentemente ameaça a estabilidade e a reputação das empresas no mercado.',
       value:
         'Estruturamos programas de seguros patrimoniais robustos, garantindo que o seu balanço permaneça protegido mesmo nos piores cenários.',
+      cta: 'Podemos realizar uma análise preliminar sem compromisso. Tem disponibilidade para uma conversa inicial de 10 minutos?',
     },
   ],
   'Auto/Frota': [
@@ -121,12 +127,14 @@ const SCRIPT_TEMPLATES = {
       pain: 'Veículos parados ou sinistros mal geridos representam aumento de custos operacionais e gargalos na entrega.',
       value:
         'A TFC implementa uma proteção de ativos e gestão de frotas com assistência corporativa 24h, reduzindo significativamente seu custo operacional.',
+      cta: 'Para te mostrar na prática como otimizamos a gestão de frotas, podemos marcar um café virtual na terça-feira?',
     },
     {
       hook: 'Focamos na eficiência operacional através da gestão inteligente de riscos de frota.',
       pain: 'A imprevisibilidade de custos com manutenção e sinistros compromete a margem de lucro de operações logísticas.',
       value:
         'Aplicamos nossa expertise para blindar sua frota, garantindo disponibilidade máxima e previsibilidade de custos com assistência ágil.',
+      cta: 'Gostaria de mostrar nossos resultados com outras empresas do setor logístico. Você tem 15 minutos livres essa semana?',
     },
   ],
   RC: [
@@ -135,12 +143,14 @@ const SCRIPT_TEMPLATES = {
       pain: 'Processos judiciais e falhas em compliance estão em escalada, ameaçando o patrimônio da empresa e dos executivos.',
       value:
         'Estruturamos a blindagem jurídica legal e compliance através do Responsabilidade Civil, permitindo que a liderança atue sem exposição patrimonial.',
+      cta: 'Como executivo, é fundamental proteger seu patrimônio pessoal. Que tal uma call confidencial de 15 minutos para eu te apresentar nosso modelo D&O?',
     },
     {
       hook: 'Somos consultores em mitigação de riscos de gestão e proteção executiva.',
       pain: 'A crescente complexidade regulatória aumenta a vulnerabilidade dos executivos a litígios e passivos inesperados.',
       value:
         'Desenhamos apólices de D&O e RC sob medida que criam uma barreira de proteção ao patrimônio pessoal, garantindo tranquilidade na tomada de decisão.',
+      cta: 'Podemos agendar uma breve reunião executiva para discutir estratégias de blindagem para sua diretoria? Como está sua agenda na sexta?',
     },
   ],
 }
@@ -192,7 +202,7 @@ export default function Prospecting() {
     if (!templates) return
     const template = templates[variant % templates.length]
 
-    const script = `Olá, ${ct}. Aqui é ${me?.name}, da TFC Seguros Corporativos.\n\n${template.hook}\n\nAvaliando o cenário atual da ${c}, identificamos um desafio comum no seu setor: ${template.pain}\n\n${template.value}\n\nO objetivo do nosso contato é agendar um Assessment Executivo de 15 minutos para mapear seu cenário e apresentar um modelo de mitigação de riscos.\n\nComo está sua disponibilidade para um call na próxima terça-feira pela manhã?`
+    const script = `Olá, ${ct}. Aqui é ${me?.name}, da TFC Seguros Corporativos.\n\n${template.hook}\n\nAvaliando o cenário atual da ${c}, identificamos um desafio comum no seu setor: ${template.pain}\n\n${template.value}\n\n${template.cta}`
     setGeneratedScript(script)
   }
 

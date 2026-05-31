@@ -10,80 +10,77 @@ import {
   TableRow,
 } from '@/components/ui/table'
 import { Badge } from '@/components/ui/badge'
-import { BarChart3, TrendingUp, AlertCircle, Award } from 'lucide-react'
+import { TrendingUp, Award, Building2 } from 'lucide-react'
 import { Navigate } from 'react-router-dom'
 
 export default function Reports() {
   const { consultants, leads, currentUser } = useAppStore()
 
   const me = consultants.find((c) => c.id === currentUser)
-  const isManager = me?.role === 'Gestora'
+  const isAgency = me?.role === 'Agência'
+  const isManager = me?.role === 'Gestora' || isAgency
 
   if (!isManager) {
     return <Navigate to="/" replace />
   }
 
-  // Calculate stats for reports
-  const stats = consultants
-    .map((c) => {
-      const consultantLeads = leads.filter((l) => l.consultantId === c.id)
-      const closedLeads = consultantLeads.filter((l) => l.status === 'Fechado')
+  // Calculate leads per entity (Group by Manager for Agency, or Consultant for Manager)
+  const teamMembers = isAgency
+    ? consultants.filter((c) => c.role === 'Gestora' || c.role === 'Agência')
+    : consultants.filter((c) => c.managerId === me?.id || c.id === me?.id)
 
+  const stats = teamMembers
+    .map((member) => {
+      // Collect all leads under this entity
+      const memberLeads = isAgency
+        ? leads.filter(
+            (l) =>
+              consultants.find((c) => c.id === l.consultantId)?.managerId === member.id ||
+              l.consultantId === member.id,
+          )
+        : leads.filter((l) => l.consultantId === member.id)
+
+      // Funnel advancement: Prospecção -> Cotação/Fechamento
+      const advancedLeads = memberLeads.filter((l) =>
+        ['Cotação', 'Fechamento', 'Fechado'].includes(l.status),
+      )
       const conversionRate =
-        consultantLeads.length > 0
-          ? Math.round((closedLeads.length / consultantLeads.length) * 100)
-          : 0
-
-      // Avanço de Funil (Leads that are in negotiation or scheduled)
-      const advancedLeads = consultantLeads.filter(
-        (l) => l.status === 'Em Negociação' || l.status === 'Agendado' || l.status === 'Fechado',
-      ).length
-
-      const funnelAdvancementRate =
-        consultantLeads.length > 0 ? Math.round((advancedLeads / consultantLeads.length) * 100) : 0
-
-      // Determine bottlenecks (Gargalos)
-      const bottlenecks = []
-      if (c.callsRealized < c.callsGoal * 0.8) {
-        bottlenecks.push('Baixo volume de prospecção')
-      }
-      if (c.visitsRealized < c.visitsGoal * 0.8) {
-        bottlenecks.push('Falta de contato presencial')
-      }
-      if (conversionRate < 20 && consultantLeads.length > 0) {
-        bottlenecks.push('Baixa taxa de conversão (Cotação -> Fechamento)')
-      }
-      if (bottlenecks.length === 0) {
-        bottlenecks.push('Desempenho Adequado')
-      }
+        memberLeads.length > 0 ? Math.round((advancedLeads.length / memberLeads.length) * 100) : 0
 
       return {
-        ...c,
-        totalContacts: consultantLeads.length,
-        closedDeals: closedLeads.length,
+        ...member,
+        totalContacts: memberLeads.length,
         conversionRate,
-        funnelAdvancementRate,
-        bottlenecks,
+        proposalsVol: advancedLeads.reduce((acc, l) => acc + l.value, 0),
       }
     })
-    .sort((a, b) => b.salesRealized - a.salesRealized)
+    .sort((a, b) => b.proposalsVol - a.proposalsVol)
 
-  // Top branches
+  // Volume of proposals by branch
+  const visibleTeamIds = isAgency
+    ? consultants.map((c) => c.id)
+    : consultants.filter((c) => c.managerId === me?.id || c.id === me?.id).map((c) => c.id)
+
+  const visibleLeads = leads.filter((l) => visibleTeamIds.includes(l.consultantId))
+  const proposalLeads = visibleLeads.filter((l) =>
+    ['Cotação', 'Fechamento', 'Fechado'].includes(l.status),
+  )
+
   const branchMap: Record<string, number> = {}
-  leads
-    .filter((l) => l.status === 'Fechado')
-    .forEach((l) => {
-      branchMap[l.branch] = (branchMap[l.branch] || 0) + l.value
-    })
+  proposalLeads.forEach((l) => {
+    branchMap[l.branch] = (branchMap[l.branch] || 0) + l.value
+  })
 
   const sortedBranches = Object.entries(branchMap).sort((a, b) => b[1] - a[1])
 
   return (
     <div className="space-y-6">
       <div>
-        <h1 className="text-3xl font-bold tracking-tight">Relatório de Performance Semanal</h1>
+        <h1 className="text-3xl font-bold tracking-tight">Relatórios Gerenciais B2B</h1>
         <p className="text-muted-foreground mt-1">
-          Dados consolidados de conversão, rankeamento e identificação de gargalos.
+          {isAgency
+            ? 'Visão consolidada da operação (Gestores e Agência)'
+            : 'Visão consolidada da sua equipe (Consultores)'}
         </p>
       </div>
 
@@ -92,35 +89,38 @@ export default function Reports() {
           <CardHeader>
             <CardTitle className="flex items-center gap-2">
               <TrendingUp className="h-5 w-5 text-primary" />
-              Desempenho da Equipe e Gargalos
+              Taxa de Conversão & Volume de Leads
             </CardTitle>
-            <CardDescription>Análise aprofundada por consultor</CardDescription>
+            <CardDescription>
+              KPIs de avanço no funil (Prospecção → Cotação/Fechamento)
+            </CardDescription>
           </CardHeader>
           <CardContent>
             <Table>
               <TableHeader>
                 <TableRow>
-                  <TableHead>Consultor</TableHead>
-                  <TableHead className="text-center">Contatados</TableHead>
-                  <TableHead className="text-center">Avanço de Funil</TableHead>
-                  <TableHead className="text-center">Taxa de Conversão</TableHead>
-                  <TableHead>Diagnóstico (Gargalos)</TableHead>
+                  <TableHead>{isAgency ? 'Gestor / Unidade' : 'Consultor'}</TableHead>
+                  <TableHead className="text-center">Total Tratados</TableHead>
+                  <TableHead className="text-center">Tx. de Conversão</TableHead>
+                  <TableHead className="text-right">Volume (Cotação+)</TableHead>
                 </TableRow>
               </TableHeader>
               <TableBody>
                 {stats.map((c) => (
                   <TableRow key={c.id}>
-                    <TableCell className="font-medium">{c.name}</TableCell>
-                    <TableCell className="text-center">{c.totalContacts}</TableCell>
-                    <TableCell className="text-center">
-                      <Badge variant="outline">{c.funnelAdvancementRate}%</Badge>
+                    <TableCell className="font-medium">
+                      <div className="flex items-center gap-2">
+                        {isAgency && <Building2 className="w-4 h-4 text-muted-foreground" />}
+                        {c.name}
+                      </div>
                     </TableCell>
+                    <TableCell className="text-center">{c.totalContacts}</TableCell>
                     <TableCell className="text-center">
                       <Badge
                         variant={
                           c.conversionRate >= 30
                             ? 'default'
-                            : c.conversionRate >= 20
+                            : c.conversionRate >= 15
                               ? 'secondary'
                               : 'destructive'
                         }
@@ -128,18 +128,12 @@ export default function Reports() {
                         {c.conversionRate}%
                       </Badge>
                     </TableCell>
-                    <TableCell>
-                      <div className="flex flex-col gap-1 items-start">
-                        {c.bottlenecks.map((b, i) => (
-                          <span
-                            key={i}
-                            className={`text-xs flex items-center gap-1 ${b === 'Desempenho Adequado' ? 'text-success' : 'text-destructive'}`}
-                          >
-                            {b !== 'Desempenho Adequado' && <AlertCircle className="h-3 w-3" />}
-                            {b}
-                          </span>
-                        ))}
-                      </div>
+                    <TableCell className="text-right font-medium">
+                      {new Intl.NumberFormat('pt-BR', {
+                        style: 'currency',
+                        currency: 'BRL',
+                        maximumFractionDigits: 0,
+                      }).format(c.proposalsVol)}
                     </TableCell>
                   </TableRow>
                 ))}
@@ -152,9 +146,9 @@ export default function Reports() {
           <CardHeader>
             <CardTitle className="flex items-center gap-2">
               <Award className="h-5 w-5 text-accent" />
-              Ranking por Ramos (R$)
+              Propostas por Ramo
             </CardTitle>
-            <CardDescription>Volume de vendas fechadas</CardDescription>
+            <CardDescription>Volume financeiro em Cotação/Fechamento</CardDescription>
           </CardHeader>
           <CardContent>
             <div className="space-y-4">
@@ -166,19 +160,20 @@ export default function Reports() {
                   >
                     <div className="flex items-center gap-3">
                       <span className="font-bold text-muted-foreground w-4">{index + 1}º</span>
-                      <span className="font-medium">{branch}</span>
+                      <span className="font-medium text-sm">{branch}</span>
                     </div>
-                    <span className="font-semibold text-primary">
+                    <span className="font-semibold text-primary text-sm">
                       {new Intl.NumberFormat('pt-BR', {
                         style: 'currency',
                         currency: 'BRL',
+                        maximumFractionDigits: 0,
                       }).format(value)}
                     </span>
                   </div>
                 ))
               ) : (
                 <p className="text-muted-foreground text-sm text-center py-4">
-                  Dados insuficientes no momento.
+                  Nenhuma proposta ativa.
                 </p>
               )}
             </div>
