@@ -1,7 +1,8 @@
 import React from 'react'
 import useAppStore from '@/stores/useAppStore'
-import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
+import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card'
 import { Badge } from '@/components/ui/badge'
+import { Button } from '@/components/ui/button'
 import { DollarSign, AlertTriangle, Clock, ChevronRight } from 'lucide-react'
 import { Link } from 'react-router-dom'
 
