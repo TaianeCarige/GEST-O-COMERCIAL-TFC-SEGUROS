@@ -17,6 +17,7 @@ import NotFound from './pages/NotFound'
 import AvailableLeads from './pages/AvailableLeads'
 import Reactivation from './pages/Reactivation'
 import VIPMentor from './pages/VIPMentor'
+import Users from './pages/Users'
 
 const App = () => (
   <BrowserRouter future={{ v7_startTransition: false, v7_relativeSplatPath: false }}>
@@ -37,6 +38,7 @@ const App = () => (
             <Route path="/vip-mentor" element={<VIPMentor />} />
             <Route path="/prospecting" element={<Prospecting />} />
             <Route path="/reports" element={<Reports />} />
+            <Route path="/users" element={<Users />} />
           </Route>
           <Route path="*" element={<NotFound />} />
         </Routes>

@@ -106,7 +106,7 @@ const MOCK_CONSULTANTS: Consultant[] = [
     id: '1',
     name: 'Taiane',
     color: 'hsl(var(--chart-1))',
-    role: 'Agência',
+    role: 'Gestora',
     callsGoal: 0,
     callsRealized: 0,
     visitsGoal: 0,
@@ -278,6 +278,8 @@ interface AppStore {
   addInteraction: (leadId: string, note: string, newStatus: Status) => void
   addGerente1327: (name: string) => void
   importLeads: (gerenteId: string, category: '1327' | 'Corporate') => void
+  addConsultant: (consultant: Omit<Consultant, 'id'>) => void
+  resetPassword: (id: string) => void
 }
 
 const AppContext = createContext<AppStore | undefined>(undefined)
@@ -286,7 +288,7 @@ export function AppStoreProvider({ children }: { children: ReactNode }) {
   const [currentUser, setCurrentUser] = useState<string>('1')
   const [leads, setLeads] = useState<Lead[]>(MOCK_LEADS)
   const [availableLeads, setAvailableLeads] = useState<AvailableLead[]>(MOCK_AVAILABLE_LEADS)
-  const [consultants] = useState<Consultant[]>(MOCK_CONSULTANTS)
+  const [consultants, setConsultants] = useState<Consultant[]>(MOCK_CONSULTANTS)
   const [gerentes1327, setGerentes1327] = useState<Gerente1327[]>([
     { id: 'g1', name: 'Gerente João' },
     { id: 'g2', name: 'Gerente Maria' },
@@ -408,6 +410,14 @@ export function AppStoreProvider({ children }: { children: ReactNode }) {
     setLeads((prev) => [...prev, newLead])
   }
 
+  const addConsultant = (consultant: Omit<Consultant, 'id'>) => {
+    setConsultants((prev) => [...prev, { ...consultant, id: `c-${Date.now()}` }])
+  }
+
+  const resetPassword = (id: string) => {
+    console.log(`Reset password for consultant ${id}`)
+  }
+
   return React.createElement(
     AppContext.Provider,
     {
@@ -428,6 +438,8 @@ export function AppStoreProvider({ children }: { children: ReactNode }) {
         addInteraction,
         addGerente1327,
         importLeads,
+        addConsultant,
+        resetPassword,
       },
     },
     children,

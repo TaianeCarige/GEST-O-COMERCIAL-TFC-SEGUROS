@@ -5,6 +5,7 @@ import { Badge } from '@/components/ui/badge'
 import { Button } from '@/components/ui/button'
 import { DollarSign, AlertTriangle, Clock, ChevronRight } from 'lucide-react'
 import { Link } from 'react-router-dom'
+import { Progress } from '@/components/ui/progress'
 
 export default function Index() {
   const { leads, consultants, currentUser } = useAppStore()
@@ -53,10 +54,64 @@ export default function Index() {
               ? 'Visão global da agência'
               : isManager
                 ? 'Visão da equipe'
-                : 'Sua performance pessoal'}
+                : 'Sua performance pessoal (Minha Evolução)'}
           </p>
         </div>
       </div>
+
+      {!isManager && me && (
+        <div className="grid gap-4 md:grid-cols-3 mb-6">
+          <Card>
+            <CardHeader className="pb-2">
+              <CardTitle className="text-sm font-medium">Meta de Ligações</CardTitle>
+            </CardHeader>
+            <CardContent>
+              <div className="flex justify-between mb-1">
+                <span className="text-2xl font-bold">{me.callsRealized}</span>
+                <span className="text-muted-foreground">/ {me.callsGoal}</span>
+              </div>
+              <Progress value={me.callsGoal > 0 ? (me.callsRealized / me.callsGoal) * 100 : 0} />
+            </CardContent>
+          </Card>
+          <Card>
+            <CardHeader className="pb-2">
+              <CardTitle className="text-sm font-medium">Meta de Visitas</CardTitle>
+            </CardHeader>
+            <CardContent>
+              <div className="flex justify-between mb-1">
+                <span className="text-2xl font-bold">{me.visitsRealized}</span>
+                <span className="text-muted-foreground">/ {me.visitsGoal}</span>
+              </div>
+              <Progress value={me.visitsGoal > 0 ? (me.visitsRealized / me.visitsGoal) * 100 : 0} />
+            </CardContent>
+          </Card>
+          <Card>
+            <CardHeader className="pb-2">
+              <CardTitle className="text-sm font-medium">Volume de Vendas</CardTitle>
+            </CardHeader>
+            <CardContent>
+              <div className="flex justify-between mb-1">
+                <span className="text-2xl font-bold text-success">
+                  {new Intl.NumberFormat('pt-BR', {
+                    style: 'currency',
+                    currency: 'BRL',
+                    maximumFractionDigits: 0,
+                  }).format(me.salesRealized)}
+                </span>
+                <span className="text-muted-foreground text-sm">
+                  /{' '}
+                  {new Intl.NumberFormat('pt-BR', {
+                    style: 'currency',
+                    currency: 'BRL',
+                    maximumFractionDigits: 0,
+                  }).format(me.salesGoal)}
+                </span>
+              </div>
+              <Progress value={me.salesGoal > 0 ? (me.salesRealized / me.salesGoal) * 100 : 0} />
+            </CardContent>
+          </Card>
+        </div>
+      )}
 
       <div className="grid gap-4 md:grid-cols-4">
         <Card className="hover:shadow-md transition-shadow">

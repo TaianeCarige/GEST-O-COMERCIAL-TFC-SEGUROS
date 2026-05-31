@@ -36,6 +36,7 @@ import {
   History,
   Sparkles,
   Inbox,
+  ShieldCheck,
 } from 'lucide-react'
 import { Input } from '@/components/ui/input'
 import { Button } from '@/components/ui/button'
@@ -58,6 +59,7 @@ export function AppSidebar() {
     { name: 'Especialista B2B', path: '/b2b-expert', icon: BriefcaseBusiness, show: true },
     { name: 'Mentor VIP', path: '/vip-mentor', icon: Sparkles, show: true },
     { name: 'Relatórios', path: '/reports', icon: BarChart3, show: isManager },
+    { name: 'Gestão de Usuários', path: '/users', icon: ShieldCheck, show: isManager },
   ].filter((item) => item.show)
 
   return (
