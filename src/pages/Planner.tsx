@@ -1,180 +1,246 @@
-import React from 'react'
-import useAppStore from '@/stores/useAppStore'
-import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card'
+import React, { useState } from 'react'
+import useAppStore, { ReminderStatus } from '@/stores/useAppStore'
 import {
-  Table,
-  TableBody,
-  TableCell,
-  TableHead,
-  TableHeader,
-  TableRow,
-} from '@/components/ui/table'
+  Card,
+  CardContent,
+  CardHeader,
+  CardTitle,
+  CardDescription,
+  CardFooter,
+} from '@/components/ui/card'
 import { Button } from '@/components/ui/button'
+import { Input } from '@/components/ui/input'
+import { Label } from '@/components/ui/label'
+import { Textarea } from '@/components/ui/textarea'
+import {
+  Dialog,
+  DialogContent,
+  DialogHeader,
+  DialogTitle,
+  DialogTrigger,
+  DialogFooter,
+} from '@/components/ui/dialog'
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from '@/components/ui/select'
 import { Badge } from '@/components/ui/badge'
 import { useToast } from '@/hooks/use-toast'
-import { Copy, CalendarClock, PhoneOutgoing } from 'lucide-react'
+import { Plus, Clock, History, Trash2 } from 'lucide-react'
 
 export default function Planner() {
-  const { leads, getConsultant, consultants, currentUser } = useAppStore()
+  const {
+    reminders,
+    addReminder,
+    updateReminderStatus,
+    addReminderObservation,
+    deleteReminder,
+    currentUser,
+  } = useAppStore()
   const { toast } = useToast()
 
-  const me = consultants.find((c) => c.id === currentUser)
-  const isManager = me?.role === 'Gestora'
-  const visibleLeads = isManager ? leads : leads.filter((l) => l.consultantId === currentUser)
+  const myReminders = reminders.filter((r) => r.userId === currentUser)
 
-  // Definition for Planner: Proximity to 90 days (e.g. > 75 days) or Pending follow-ups
-  const thresholdDate = new Date()
-  thresholdDate.setDate(thresholdDate.getDate() - 75)
+  const [isAddOpen, setIsAddOpen] = useState(false)
+  const [newReminder, setNewReminder] = useState({
+    description: '',
+    dateTime: '',
+    observations: '',
+  })
 
-  const plannerLeads = visibleLeads
-    .filter(
-      (l) =>
-        new Date(l.lastContact) < thresholdDate && l.status !== 'Fechado' && l.status !== 'Perdido',
-    )
-    .sort((a, b) => new Date(a.lastContact).getTime() - new Date(b.lastContact).getTime())
-
-  const copyToClipboard = () => {
-    const text = plannerLeads
-      .map((l) => {
-        const days = Math.floor(
-          (new Date().getTime() - new Date(l.lastContact).getTime()) / (1000 * 3600 * 24),
-        )
-        return `${l.name} | Ramo: ${l.branch} | Resp: ${getConsultant(l.consultantId)?.name} | Dias s/ contato: ${days}`
+  const handleAdd = () => {
+    if (!newReminder.description || !newReminder.dateTime) {
+      toast({
+        title: 'Campos obrigatórios',
+        description: 'Preencha a descrição e a data/hora.',
+        variant: 'destructive',
       })
-      .join('\n')
-
-    navigator.clipboard.writeText(text)
-    toast({
-      title: 'Lista copiada!',
-      description: 'A lista de contatos semanais foi copiada para a área de transferência.',
+      return
+    }
+    addReminder({
+      description: newReminder.description,
+      dateTime: new Date(newReminder.dateTime).toISOString(),
+      observations: newReminder.observations,
+      status: 'Pendente',
     })
+    setNewReminder({ description: '', dateTime: '', observations: '' })
+    setIsAddOpen(false)
+    toast({ title: 'Lembrete adicionado' })
   }
 
   return (
     <div className="space-y-6">
-      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+      <div className="flex items-center justify-between">
         <div>
-          <h1 className="text-3xl font-bold tracking-tight">Planejador Semanal</h1>
+          <h1 className="text-3xl font-bold tracking-tight">Meus Lembretes</h1>
           <p className="text-muted-foreground mt-1">
-            Clientes para contactar esta semana (Proximidade 90 dias)
+            Gerencie suas atividades, reuniões e follow-ups.
           </p>
         </div>
-        <Button onClick={copyToClipboard} variant="outline" className="shrink-0 bg-white">
-          <Copy className="h-4 w-4 mr-2" />
-          Copiar Lista
-        </Button>
+        <Dialog open={isAddOpen} onOpenChange={setIsAddOpen}>
+          <DialogTrigger asChild>
+            <Button>
+              <Plus className="w-4 h-4 mr-2" /> Novo Lembrete
+            </Button>
+          </DialogTrigger>
+          <DialogContent>
+            <DialogHeader>
+              <DialogTitle>Criar Lembrete</DialogTitle>
+            </DialogHeader>
+            <div className="space-y-4 py-4">
+              <div className="space-y-2">
+                <Label>Descrição (Obrigatório)</Label>
+                <Input
+                  value={newReminder.description}
+                  onChange={(e) => setNewReminder({ ...newReminder, description: e.target.value })}
+                  placeholder="Ex: Ligar para Indústrias Alfa"
+                />
+              </div>
+              <div className="space-y-2">
+                <Label>Data e Hora (Obrigatório)</Label>
+                <Input
+                  type="datetime-local"
+                  value={newReminder.dateTime}
+                  onChange={(e) => setNewReminder({ ...newReminder, dateTime: e.target.value })}
+                />
+              </div>
+              <div className="space-y-2">
+                <Label>Observações Adicionais</Label>
+                <Textarea
+                  value={newReminder.observations}
+                  onChange={(e) => setNewReminder({ ...newReminder, observations: e.target.value })}
+                  placeholder="Informações úteis para a atividade..."
+                />
+              </div>
+            </div>
+            <DialogFooter>
+              <Button onClick={handleAdd}>Salvar Lembrete</Button>
+            </DialogFooter>
+          </DialogContent>
+        </Dialog>
       </div>
 
-      <div className="grid gap-6 md:grid-cols-3">
-        <div className="md:col-span-2 space-y-6">
-          <Card>
-            <CardHeader>
-              <CardTitle>Fila de Contatos Prioritários</CardTitle>
-              <CardDescription>Ordenados por urgência e tempo sem contato</CardDescription>
-            </CardHeader>
-            <CardContent>
-              <Table>
-                <TableHeader>
-                  <TableRow>
-                    <TableHead>Prioridade</TableHead>
-                    <TableHead>Cliente</TableHead>
-                    {isManager && <TableHead>Consultor</TableHead>}
-                    <TableHead className="text-right">Dias Inativo</TableHead>
-                  </TableRow>
-                </TableHeader>
-                <TableBody>
-                  {plannerLeads.length > 0 ? (
-                    plannerLeads.map((lead, index) => {
-                      const days = Math.floor(
-                        (new Date().getTime() - new Date(lead.lastContact).getTime()) /
-                          (1000 * 3600 * 24),
-                      )
-                      const isCritical = days >= 90
-
-                      return (
-                        <TableRow
-                          key={lead.id}
-                          className={isCritical ? 'bg-destructive/5 hover:bg-destructive/10' : ''}
-                        >
-                          <TableCell>
-                            <Badge variant={isCritical ? 'destructive' : 'secondary'}>
-                              {isCritical ? 'Alta' : 'Média'}
-                            </Badge>
-                          </TableCell>
-                          <TableCell>
-                            <span className="font-medium block">{lead.name}</span>
-                            <span className="text-xs text-muted-foreground">{lead.branch}</span>
-                          </TableCell>
-                          {isManager && (
-                            <TableCell>{getConsultant(lead.consultantId)?.name}</TableCell>
-                          )}
-                          <TableCell className="text-right font-medium">
-                            <span className={isCritical ? 'text-destructive' : ''}>{days}</span>
-                          </TableCell>
-                        </TableRow>
-                      )
-                    })
-                  ) : (
-                    <TableRow>
-                      <TableCell
-                        colSpan={isManager ? 4 : 3}
-                        className="text-center h-24 text-muted-foreground"
-                      >
-                        Nenhum cliente na fila de alerta. Ótimo trabalho de retenção!
-                      </TableCell>
-                    </TableRow>
-                  )}
-                </TableBody>
-              </Table>
-            </CardContent>
-          </Card>
-        </div>
-
-        <div className="space-y-6">
-          <Card className="bg-primary text-primary-foreground">
-            <CardHeader>
-              <CardTitle className="flex items-center gap-2">
-                <CalendarClock className="h-5 w-5" />
-                Meta Semanal
-              </CardTitle>
-            </CardHeader>
-            <CardContent>
-              <div className="text-4xl font-bold mb-2">{plannerLeads.length}</div>
-              <p className="text-sm opacity-80">
-                Contatos de reativação pendentes para esta semana.
-              </p>
-            </CardContent>
-          </Card>
-
-          <Card>
-            <CardHeader>
-              <CardTitle className="text-lg">Instruções de Abordagem</CardTitle>
-            </CardHeader>
-            <CardContent className="space-y-4">
-              <div className="flex gap-3">
-                <PhoneOutgoing className="h-5 w-5 text-accent shrink-0" />
-                <div>
-                  <p className="font-medium text-sm">Foco em Relacionamento</p>
-                  <p className="text-xs text-muted-foreground mt-1">
-                    Não tente vender imediatamente. Pergunte sobre as mudanças na empresa desde o
-                    último contato.
-                  </p>
-                </div>
-              </div>
-              <div className="flex gap-3">
-                <PhoneOutgoing className="h-5 w-5 text-accent shrink-0" />
-                <div>
-                  <p className="font-medium text-sm">Renovação de Apólices</p>
-                  <p className="text-xs text-muted-foreground mt-1">
-                    Verifique se o cliente possui apólices com concorrentes vencendo no próximo
-                    trimestre.
-                  </p>
-                </div>
-              </div>
-            </CardContent>
-          </Card>
-        </div>
+      <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
+        {myReminders
+          .sort((a, b) => new Date(a.dateTime).getTime() - new Date(b.dateTime).getTime())
+          .map((r) => (
+            <ReminderCard
+              key={r.id}
+              reminder={r}
+              updateStatus={updateReminderStatus}
+              addObservation={addReminderObservation}
+              deleteReminder={deleteReminder}
+            />
+          ))}
+        {myReminders.length === 0 && (
+          <div className="col-span-full py-12 text-center text-muted-foreground border rounded-lg border-dashed">
+            Você não possui lembretes no momento.
+          </div>
+        )}
       </div>
     </div>
+  )
+}
+
+function ReminderCard({ reminder, updateStatus, addObservation, deleteReminder }: any) {
+  const [newObs, setNewObs] = useState('')
+  const { toast } = useToast()
+
+  const isPast =
+    new Date(reminder.dateTime).getTime() < new Date().getTime() && reminder.status === 'Pendente'
+
+  const handleAddObs = () => {
+    if (!newObs) return
+    addObservation(reminder.id, newObs)
+    setNewObs('')
+    toast({ title: 'Observação adicionada' })
+  }
+
+  return (
+    <Card
+      className={`flex flex-col h-full ${isPast ? 'border-destructive/50 shadow-sm shadow-destructive/10' : ''}`}
+    >
+      <CardHeader className="pb-3">
+        <div className="flex justify-between items-start gap-4">
+          <CardTitle className="text-lg leading-tight">{reminder.description}</CardTitle>
+          <Badge
+            variant={
+              reminder.status === 'Pendente' ? (isPast ? 'destructive' : 'secondary') : 'default'
+            }
+            className="shrink-0"
+          >
+            {reminder.status}
+          </Badge>
+        </div>
+        <CardDescription
+          className={`flex items-center gap-1 mt-1 text-xs font-medium ${isPast ? 'text-destructive font-bold' : ''}`}
+        >
+          <Clock className="w-3 h-3" />
+          {new Date(reminder.dateTime).toLocaleString('pt-BR')}
+        </CardDescription>
+      </CardHeader>
+      <CardContent className="flex-1 space-y-4">
+        {reminder.observations && (
+          <div className="text-sm bg-muted/30 p-2 rounded-md border text-muted-foreground whitespace-pre-wrap">
+            {reminder.observations}
+          </div>
+        )}
+
+        <div className="space-y-2">
+          <h4 className="text-xs font-semibold flex items-center gap-1">
+            <History className="w-3 h-3" /> Histórico
+          </h4>
+          <div className="max-h-32 overflow-y-auto space-y-2 text-xs">
+            {reminder.history.map((h: any) => (
+              <div key={h.id} className="border-l-2 border-primary/30 pl-2 py-0.5">
+                <p className="whitespace-pre-wrap">{h.note}</p>
+              </div>
+            ))}
+            {reminder.history.length === 0 && (
+              <p className="text-muted-foreground">Sem histórico.</p>
+            )}
+          </div>
+        </div>
+      </CardContent>
+      <CardFooter className="pt-3 border-t bg-muted/10 flex flex-col gap-3 mt-auto">
+        <div className="flex w-full gap-2">
+          <Input
+            placeholder="Adicionar observação..."
+            className="h-8 text-xs"
+            value={newObs}
+            onChange={(e) => setNewObs(e.target.value)}
+          />
+          <Button size="sm" className="h-8" variant="secondary" onClick={handleAddObs}>
+            Salvar
+          </Button>
+        </div>
+        <div className="flex items-center justify-between w-full">
+          <Select
+            value={reminder.status}
+            onValueChange={(val: ReminderStatus) => updateStatus(reminder.id, val)}
+          >
+            <SelectTrigger className="w-[140px] h-8 text-xs">
+              <SelectValue />
+            </SelectTrigger>
+            <SelectContent>
+              <SelectItem value="Pendente">Pendente</SelectItem>
+              <SelectItem value="Concluído">Concluído</SelectItem>
+            </SelectContent>
+          </Select>
+
+          <Button
+            size="icon"
+            variant="ghost"
+            className="h-8 w-8 text-destructive hover:bg-destructive/10"
+            onClick={() => deleteReminder(reminder.id)}
+          >
+            <Trash2 className="h-4 w-4" />
+          </Button>
+        </div>
+      </CardFooter>
+    </Card>
   )
 }

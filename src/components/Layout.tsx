@@ -1,5 +1,6 @@
 import { Outlet, Link, useLocation } from 'react-router-dom'
 import useAppStore from '@/stores/useAppStore'
+import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover'
 import {
   SidebarProvider,
   Sidebar,
@@ -55,9 +56,9 @@ export function AppSidebar() {
     { name: 'Reativação (+90 dias)', path: '/reactivation', icon: History, show: true },
     { name: 'Metas & Evolução', path: '/goals', icon: Target, show: true },
     { name: 'Agenda', path: '/agenda', icon: CalendarDays, show: true },
-    { name: 'Planejador Semanal', path: '/planner', icon: ListTodo, show: true },
+    { name: 'Meus Lembretes', path: '/planner', icon: ListTodo, show: true },
     {
-      name: 'Prospecção B2B',
+      name: 'Prospecção B2B (Scripts)',
       path: '/prospecting',
       icon: Telescope,
       show: myPermissions.script_generator,
@@ -111,8 +112,15 @@ export function AppSidebar() {
 }
 
 export default function Layout() {
-  const { consultants, currentUser, setCurrentUser } = useAppStore()
+  const { consultants, currentUser, setCurrentUser, reminders } = useAppStore()
   const me = consultants.find((c) => c.id === currentUser)
+
+  const myReminders =
+    reminders?.filter((r) => r.userId === currentUser && r.status === 'Pendente') || []
+  const upcomingReminders = myReminders.filter((r) => {
+    const timeDiff = new Date(r.dateTime).getTime() - new Date().getTime()
+    return timeDiff > 0 && timeDiff <= 24 * 60 * 60 * 1000 // up to 24 hours
+  })
 
   return (
     <SidebarProvider>
@@ -132,14 +140,39 @@ export default function Layout() {
               </div>
             </div>
             <div className="flex items-center gap-4">
-              <Button
-                variant="ghost"
-                size="icon"
-                className="relative text-muted-foreground hover:text-foreground"
-              >
-                <Bell className="h-5 w-5" />
-                <span className="absolute top-2 right-2.5 w-2 h-2 bg-destructive rounded-full" />
-              </Button>
+              <Popover>
+                <PopoverTrigger asChild>
+                  <Button
+                    variant="ghost"
+                    size="icon"
+                    className="relative text-muted-foreground hover:text-foreground"
+                  >
+                    <Bell className="h-5 w-5" />
+                    {upcomingReminders.length > 0 && (
+                      <span className="absolute top-2 right-2.5 w-2 h-2 bg-destructive rounded-full animate-pulse" />
+                    )}
+                  </Button>
+                </PopoverTrigger>
+                <PopoverContent align="end" className="w-80">
+                  <div className="flex flex-col gap-2">
+                    <h3 className="font-semibold text-sm">Notificações</h3>
+                    {upcomingReminders.length === 0 ? (
+                      <p className="text-sm text-muted-foreground">Nenhum lembrete próximo.</p>
+                    ) : (
+                      <div className="flex flex-col gap-2 max-h-60 overflow-y-auto">
+                        {upcomingReminders.map((r) => (
+                          <div key={r.id} className="text-sm border-b pb-2 last:border-0 last:pb-0">
+                            <p className="font-medium text-foreground">{r.description}</p>
+                            <p className="text-xs text-muted-foreground mt-1">
+                              {new Date(r.dateTime).toLocaleString('pt-BR')}
+                            </p>
+                          </div>
+                        ))}
+                      </div>
+                    )}
+                  </div>
+                </PopoverContent>
+              </Popover>
               <div className="border-l pl-4 ml-2">
                 <DropdownMenu>
                   <DropdownMenuTrigger asChild>

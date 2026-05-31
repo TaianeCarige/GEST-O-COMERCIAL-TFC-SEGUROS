@@ -96,6 +96,18 @@ export interface Gerente1327 {
   name: string
 }
 
+export type ReminderStatus = 'Pendente' | 'Concluído'
+
+export interface Reminder {
+  id: string
+  userId: string
+  description: string
+  dateTime: string
+  observations: string
+  status: ReminderStatus
+  history: { id: string; date: string; note: string }[]
+}
+
 export interface AvailableLead {
   id: string
   name: string
@@ -327,6 +339,11 @@ interface AppStore {
   importLeads: (gerenteId: string, category: '1327' | 'Corporate') => void
   addConsultant: (consultant: Omit<Consultant, 'id'>) => void
   resetPassword: (id: string) => void
+  reminders: Reminder[]
+  addReminder: (reminder: Omit<Reminder, 'id' | 'userId' | 'history'>) => void
+  updateReminderStatus: (id: string, status: ReminderStatus) => void
+  addReminderObservation: (id: string, note: string) => void
+  deleteReminder: (id: string) => void
 }
 
 const AppContext = createContext<AppStore | undefined>(undefined)
@@ -341,6 +358,68 @@ export function AppStoreProvider({ children }: { children: ReactNode }) {
     { id: 'g1', name: 'Gerente João' },
     { id: 'g2', name: 'Gerente Maria' },
   ])
+  const [reminders, setReminders] = useState<Reminder[]>([
+    {
+      id: 'r1',
+      userId: '1',
+      description: 'Follow up com Indústrias Sigma',
+      dateTime: new Date(Date.now() + 2 * 60 * 60 * 1000).toISOString(),
+      observations: 'Revisar apólice atual e propor cross-sell',
+      status: 'Pendente',
+      history: [],
+    },
+  ])
+
+  const addReminder = (reminder: Omit<Reminder, 'id' | 'userId' | 'history'>) => {
+    setReminders((prev) => [
+      ...prev,
+      { ...reminder, id: `r-${Date.now()}`, userId: currentUser, history: [] },
+    ])
+  }
+
+  const updateReminderStatus = (id: string, status: ReminderStatus) => {
+    setReminders((prev) =>
+      prev.map((r) => {
+        if (r.id === id) {
+          const me = consultants.find((c) => c.id === currentUser)
+          const dateObj = new Date()
+          const formattedDate = `${dateObj.toLocaleDateString('pt-BR')} ${dateObj.toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit' })}`
+          const note = `Status alterado para ${status} - ${me?.name} - ${formattedDate}`
+          return {
+            ...r,
+            status,
+            history: [{ id: `h-${Date.now()}`, date: dateObj.toISOString(), note }, ...r.history],
+          }
+        }
+        return r
+      }),
+    )
+  }
+
+  const addReminderObservation = (id: string, note: string) => {
+    setReminders((prev) =>
+      prev.map((r) => {
+        if (r.id === id) {
+          const me = consultants.find((c) => c.id === currentUser)
+          const dateObj = new Date()
+          const formattedDate = `${dateObj.toLocaleDateString('pt-BR')} ${dateObj.toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit' })}`
+          const formattedNote = `${note} - ${me?.name} - ${formattedDate}`
+          return {
+            ...r,
+            history: [
+              { id: `h-${Date.now()}`, date: dateObj.toISOString(), note: formattedNote },
+              ...r.history,
+            ],
+          }
+        }
+        return r
+      }),
+    )
+  }
+
+  const deleteReminder = (id: string) => {
+    setReminders((prev) => prev.filter((r) => r.id !== id))
+  }
 
   const updateLeadStatus = (id: string, status: Status) => {
     setLeads((prev) => prev.map((l) => (l.id === id ? { ...l, status } : l)))
@@ -513,6 +592,11 @@ export function AppStoreProvider({ children }: { children: ReactNode }) {
         addConsultant,
         resetPassword,
         updateConsultantGoals,
+        reminders,
+        addReminder,
+        updateReminderStatus,
+        addReminderObservation,
+        deleteReminder,
       },
     },
     children,
