@@ -15,7 +15,6 @@ import Prospecting from './pages/Prospecting'
 import Reports from './pages/Reports'
 import NotFound from './pages/NotFound'
 import AvailableLeads from './pages/AvailableLeads'
-import ScriptGenerator from './pages/ScriptGenerator'
 import Reactivation from './pages/Reactivation'
 import VIPMentor from './pages/VIPMentor'
 
@@ -30,7 +29,6 @@ const App = () => (
             <Route path="/" element={<Index />} />
             <Route path="/leads" element={<Leads />} />
             <Route path="/available-leads" element={<AvailableLeads />} />
-            <Route path="/scripts" element={<ScriptGenerator />} />
             <Route path="/reactivation" element={<Reactivation />} />
             <Route path="/goals" element={<Goals />} />
             <Route path="/agenda" element={<Agenda />} />
