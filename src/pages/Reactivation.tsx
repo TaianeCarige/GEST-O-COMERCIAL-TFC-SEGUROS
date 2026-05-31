@@ -85,7 +85,12 @@ export default function Reactivation() {
                         <Badge variant="outline">{lead.branch}</Badge>
                       </TableCell>
                       <TableCell>
-                        <span className="text-destructive font-bold">{daysInactive} dias</span>
+                        <div className="flex flex-col items-start gap-1">
+                          <span className="text-destructive font-bold">{daysInactive} dias</span>
+                          <Badge variant="destructive" className="text-[10px] uppercase">
+                            Reativação Imediata
+                          </Badge>
+                        </div>
                       </TableCell>
                       {isManager && <TableCell>{getConsultant(lead.consultantId)?.name}</TableCell>}
                       <TableCell className="text-right flex items-center justify-end gap-2">

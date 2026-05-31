@@ -65,10 +65,15 @@ export function AppSidebar() {
     <Sidebar>
       <SidebarHeader className="py-6 px-4">
         <div className="flex items-center gap-2">
-          <div className="h-8 w-8 rounded-lg bg-sidebar-primary flex items-center justify-center text-sidebar-primary-foreground font-bold text-lg">
+          <div className="h-8 w-8 rounded-lg bg-primary flex items-center justify-center text-primary-foreground font-bold text-lg">
             TF
           </div>
-          <span className="text-xl font-bold text-sidebar-foreground">CRM Inteligente</span>
+          <div className="flex flex-col">
+            <span className="text-sm font-bold text-sidebar-foreground leading-tight">
+              Ecossistema Comercial
+            </span>
+            <span className="text-xs text-muted-foreground">TFC Seguros</span>
+          </div>
         </div>
       </SidebarHeader>
       <SidebarContent>

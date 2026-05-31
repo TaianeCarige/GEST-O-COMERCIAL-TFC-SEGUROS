@@ -199,7 +199,7 @@ export default function Leads() {
                         {new Date(lead.lastContact).toLocaleDateString('pt-BR')}
                         {new Date(lead.lastContact) < ninetyDaysAgo && (
                           <span className="ml-2 text-xs text-destructive font-bold inline-flex items-center">
-                            <AlertTriangle className="w-3 h-3 mr-1" /> Reativação Necessária
+                            <AlertTriangle className="w-3 h-3 mr-1" /> Reativação Imediata
                           </span>
                         )}
                       </TableCell>
@@ -257,12 +257,12 @@ export default function Leads() {
                             </DropdownMenuLabel>
                             <DropdownMenuItem asChild>
                               <Link to={`/b2b-expert?sector=${encodeURIComponent(lead.branch)}`}>
-                                Briefing Técnico
+                                Expert Estrategista B2B
                               </Link>
                             </DropdownMenuItem>
                             <DropdownMenuItem asChild>
                               <Link to={`/vip-mentor?lead=${encodeURIComponent(lead.name)}`}>
-                                Refinamento VIP
+                                Expert Mentor Alta Renda
                               </Link>
                             </DropdownMenuItem>
                           </DropdownMenuContent>

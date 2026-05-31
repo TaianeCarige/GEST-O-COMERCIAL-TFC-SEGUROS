@@ -277,7 +277,7 @@ export default function Index() {
             <div className="space-y-1">
               <CardTitle>Alerta de Retenção</CardTitle>
               <CardDescription className="text-destructive font-medium">
-                Reativação Necessária (+90 dias)
+                Reativação Imediata (+90 dias)
               </CardDescription>
             </div>
             <Button variant="ghost" size="icon" asChild>

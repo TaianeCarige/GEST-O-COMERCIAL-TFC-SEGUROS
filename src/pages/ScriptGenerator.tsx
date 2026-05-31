@@ -15,35 +15,35 @@ import { useToast } from '@/hooks/use-toast'
 import useAppStore from '@/stores/useAppStore'
 
 const SCRIPT_TEMPLATES = {
-  'Saúde (Health)': {
-    hook: 'Especialistas em blindagem e gestão de benefícios corporativos.',
-    pain: 'A inflação médica e o alto turnover estão esmagando as margens das operações neste ano.',
+  Saúde: {
+    hook: 'Somos especialistas em blindagem e gestão de benefícios corporativos de alto nível.',
+    pain: 'Sabemos que a inflação médica e a dificuldade na retenção de talentos estão esmagando as margens das operações neste ano.',
     value:
-      'Desenhamos uma arquitetura de Saúde que foca em retenção de talentos críticos enquanto aplicamos engenharia de redução de sinistralidade.',
+      'Desenhamos uma arquitetura de Saúde focada na retenção de talentos críticos e gestão de benefícios, enquanto aplicamos engenharia de redução de sinistralidade.',
   },
-  'Odontológico (Dental)': {
-    hook: 'Focados na valorização do capital humano com alto impacto perceptível.',
-    pain: 'Muitas empresas perdem a chance de fidelizar a equipe por não oferecerem benefícios de alta percepção e baixo custo.',
+  Odonto: {
+    hook: 'Atuamos na valorização do capital humano com alto impacto perceptível.',
+    pain: 'Muitas empresas perdem a chance de fidelizar a equipe por não oferecerem benefícios de alta percepção.',
     value:
-      'A TFC estrutura planos odontológicos integrados que funcionam como alavanca de retenção de talentos sem onerar a folha.',
+      'A TFC estrutura planos odontológicos focados em retenção de talentos e gestão de benefícios eficientes que não oneram a folha.',
   },
-  'Patrimonial (Property)': {
-    hook: 'Consultoria focada em continuidade de negócios e proteção de balanço.',
-    pain: 'Uma interrupção operacional imprevista (como danos elétricos ou incêndios) pode quebrar o caixa de operações que não têm apólices atualizadas.',
+  Patrimonial: {
+    hook: 'Nossa consultoria é focada na continuidade de negócios e proteção de balanço financeiro.',
+    pain: 'Uma interrupção operacional imprevista pode quebrar o caixa de operações que não possuem compliance adequado de apólices.',
     value:
-      'Realizamos uma varredura de exposição de riscos e desenhamos coberturas sob medida de Lucros Cessantes, garantindo a solidez do negócio.',
+      'Realizamos uma varredura de exposição de riscos e desenhamos uma blindagem jurídica e continuidade de negócios garantindo a solidez corporativa.',
   },
-  'Automóveis/Frotas (Auto/Fleet)': {
-    hook: 'Especialistas em otimização de custo logístico e mitigação de riscos de transporte.',
-    pain: 'Veículos parados ou sinistros mal geridos representam gargalos gigantes na operação e atrasos na entrega.',
+  'Auto/Frota': {
+    hook: 'Somos especialistas em otimização de custo logístico e proteção de ativos corporativos.',
+    pain: 'Veículos parados ou sinistros mal geridos representam aumento de custos operacionais e gargalos na entrega.',
     value:
-      'A TFC implementa uma gestão de frotas voltada à disponibilidade dos ativos, reduzindo o custo total de risco e agilizando as operações.',
+      'A TFC implementa uma proteção de ativos e gestão de frotas com assistência corporativa 24h, reduzindo significativamente seu custo operacional.',
   },
-  'Responsabilidade Civil (RC)': {
-    hook: 'Proteção patrimonial para sócios, diretores e para a operação como um todo.',
-    pain: 'Processos judiciais trabalhistas, profissionais e de terceiros estão em escalada, ameaçando diretamente o patrimônio da empresa e dos executivos.',
+  RC: {
+    hook: 'Atuamos com proteção patrimonial corporativa para sócios, diretores e operações complexas.',
+    pain: 'Processos judiciais e falhas em compliance estão em escalada, ameaçando o patrimônio da empresa e dos executivos.',
     value:
-      'Estruturamos a blindagem jurídica através do RC Profissional e D&O, permitindo que a liderança tome decisões sem exposição patrimonial.',
+      'Estruturamos a blindagem jurídica legal e compliance através do Responsabilidade Civil, permitindo que a liderança atue sem exposição patrimonial.',
   },
 }
 
@@ -63,17 +63,17 @@ export default function ScriptGenerator() {
     const template = SCRIPT_TEMPLATES[product as keyof typeof SCRIPT_TEMPLATES]
     if (!template) return
 
-    const script = `Olá ${contact}, aqui é ${me?.name}, da TFC Seguros Corporativos.
+    const script = `Olá, ${contact}. Aqui é ${me?.name}, da TFC Seguros Corporativos.
 
 ${template.hook}
 
-Avaliando o cenário da ${company}, identificamos um desafio comum no seu setor: ${template.pain}
+Avaliando o cenário atual da ${company}, identificamos um desafio comum no seu setor: ${template.pain}
 
 ${template.value}
 
-O objetivo do nosso contato é agendar um briefing de 15 minutos para mapear seu cenário atual e apresentar um case de redução de exposição. 
+O objetivo do nosso contato é agendar um Assessment Executivo de 15 minutos para mapear seu cenário e apresentar um modelo de mitigação de riscos.
 
-Como está sua agenda para a próxima terça-feira pela manhã?`
+Como está sua disponibilidade para um call na próxima terça-feira pela manhã?`
 
     setGeneratedScript(script)
   }
