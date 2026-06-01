@@ -344,6 +344,8 @@ interface AppStore {
   updateReminderStatus: (id: string, status: ReminderStatus) => void
   addReminderObservation: (id: string, note: string) => void
   deleteReminder: (id: string) => void
+  editReminder: (id: string, details: Partial<Reminder>) => void
+  deleteLead: (id: string) => void
 }
 
 const AppContext = createContext<AppStore | undefined>(undefined)
@@ -453,7 +455,56 @@ export function AppStoreProvider({ children }: { children: ReactNode }) {
   }
 
   const updateLeadDetails = (id: string, details: Partial<Lead>) => {
-    setLeads((prev) => prev.map((l) => (l.id === id ? { ...l, ...details } : l)))
+    const me = consultants.find((c) => c.id === currentUser)
+    const dateObj = new Date()
+    const formattedDate = `${dateObj.toLocaleDateString('pt-BR')} ${dateObj.toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit' })}`
+    const note = `Dados atualizados - ${me?.name} - ${formattedDate}`
+
+    setLeads((prev) =>
+      prev.map((l) => {
+        if (l.id === id) {
+          return {
+            ...l,
+            ...details,
+            history: [
+              {
+                id: `h-${Date.now()}`,
+                date: dateObj.toISOString(),
+                userId: me?.id || '',
+                userName: me?.name || '',
+                note,
+                newStatus: l.status,
+              },
+              ...(l.history || []),
+            ],
+          }
+        }
+        return l
+      }),
+    )
+  }
+
+  const deleteLead = (id: string) => {
+    setLeads((prev) => prev.filter((l) => l.id !== id))
+  }
+
+  const editReminder = (id: string, details: Partial<Reminder>) => {
+    setReminders((prev) =>
+      prev.map((r) => {
+        if (r.id === id) {
+          const me = consultants.find((c) => c.id === currentUser)
+          const dateObj = new Date()
+          const formattedDate = `${dateObj.toLocaleDateString('pt-BR')} ${dateObj.toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit' })}`
+          const note = `Lembrete atualizado - ${me?.name} - ${formattedDate}`
+          return {
+            ...r,
+            ...details,
+            history: [{ id: `h-${Date.now()}`, date: dateObj.toISOString(), note }, ...r.history],
+          }
+        }
+        return r
+      }),
+    )
   }
 
   const addPolicy = (leadId: string, policy: Omit<Policy, 'id'>) => {
@@ -597,6 +648,8 @@ export function AppStoreProvider({ children }: { children: ReactNode }) {
         updateReminderStatus,
         addReminderObservation,
         deleteReminder,
+        editReminder,
+        deleteLead,
       },
     },
     children,

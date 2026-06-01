@@ -48,6 +48,16 @@ import {
   DialogTrigger,
 } from '@/components/ui/dialog'
 import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+} from '@/components/ui/alert-dialog'
+import {
   MoreHorizontal,
   Filter,
   UserPlus,
@@ -61,6 +71,8 @@ import {
   Sparkles,
   CalendarDays,
   Copy,
+  Edit,
+  Trash2,
 } from 'lucide-react'
 import { Navigate } from 'react-router-dom'
 
@@ -324,6 +336,51 @@ function LeadsTable({
   me,
 }: any) {
   const now = new Date().getTime()
+  const { toast } = useToast()
+  const { deleteLead, updateLeadDetails, updatePolicyDate } = useAppStore()
+
+  const [deleteLeadId, setDeleteLeadId] = useState<string | null>(null)
+  const [editLeadData, setEditLeadData] = useState<Lead | null>(null)
+
+  const [editForm, setEditForm] = useState({
+    name: '',
+    cnpj: '',
+    industry: '',
+    contactName: '',
+    contactPhone: '',
+    branch: 'Saúde' as any,
+  })
+
+  const handleEditClick = (lead: Lead) => {
+    setEditLeadData(lead)
+    setEditForm({
+      name: lead.name || '',
+      cnpj: lead.cnpj || '',
+      industry: lead.industry || '',
+      contactName: lead.contactName || '',
+      contactPhone: lead.contactPhone || '',
+      branch: lead.branch || 'Saúde',
+    })
+  }
+
+  const handleSaveEdit = () => {
+    if (editLeadData) {
+      updateLeadDetails(editLeadData.id, editForm)
+      setEditLeadData(null)
+      toast({
+        title: 'Lead atualizado',
+        description: 'As alterações foram salvas e registradas no histórico.',
+      })
+    }
+  }
+
+  const handleDeleteConfirm = () => {
+    if (deleteLeadId) {
+      deleteLead(deleteLeadId)
+      setDeleteLeadId(null)
+      toast({ title: 'Lead removido', description: 'O registro foi apagado com sucesso.' })
+    }
+  }
 
   const getStatusColor = (status: Status) => {
     switch (status) {
@@ -354,6 +411,126 @@ function LeadsTable({
 
   return (
     <Card>
+      <AlertDialog open={!!deleteLeadId} onOpenChange={(open) => !open && setDeleteLeadId(null)}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>Excluir Lead?</AlertDialogTitle>
+            <AlertDialogDescription>
+              Tem certeza que deseja remover este lead? Esta ação não poderá ser desfeita.
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel>Cancelar</AlertDialogCancel>
+            <AlertDialogAction
+              onClick={handleDeleteConfirm}
+              className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
+            >
+              Excluir
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
+
+      <Dialog open={!!editLeadData} onOpenChange={(open) => !open && setEditLeadData(null)}>
+        <DialogContent className="sm:max-w-[500px]">
+          <DialogHeader>
+            <DialogTitle>Editar Lead</DialogTitle>
+          </DialogHeader>
+          <div className="grid gap-4 py-4 max-h-[60vh] overflow-y-auto pr-2">
+            <div className="grid grid-cols-2 gap-4">
+              <div className="space-y-2">
+                <Label>Nome do Cliente</Label>
+                <Input
+                  value={editForm.name}
+                  onChange={(e) => setEditForm({ ...editForm, name: e.target.value })}
+                />
+              </div>
+              <div className="space-y-2">
+                <Label>Ramo</Label>
+                <Select
+                  value={editForm.branch}
+                  onValueChange={(val: any) => setEditForm({ ...editForm, branch: val })}
+                >
+                  <SelectTrigger>
+                    <SelectValue />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="Automóveis/Frotas">Automóveis/Frotas</SelectItem>
+                    <SelectItem value="Saúde">Saúde</SelectItem>
+                    <SelectItem value="Odonto">Odonto</SelectItem>
+                    <SelectItem value="Patrimonial">Patrimonial</SelectItem>
+                    <SelectItem value="RC">RC</SelectItem>
+                    <SelectItem value="Vida">Vida</SelectItem>
+                    <SelectItem value="Outros">Outros</SelectItem>
+                  </SelectContent>
+                </Select>
+              </div>
+              <div className="space-y-2">
+                <Label>CNPJ</Label>
+                <Input
+                  value={editForm.cnpj}
+                  onChange={(e) => setEditForm({ ...editForm, cnpj: e.target.value })}
+                />
+              </div>
+              <div className="space-y-2">
+                <Label>Indústria</Label>
+                <Input
+                  value={editForm.industry}
+                  onChange={(e) => setEditForm({ ...editForm, industry: e.target.value })}
+                />
+              </div>
+              <div className="space-y-2">
+                <Label>Responsável</Label>
+                <Input
+                  value={editForm.contactName}
+                  onChange={(e) => setEditForm({ ...editForm, contactName: e.target.value })}
+                />
+              </div>
+              <div className="space-y-2">
+                <Label>Telefone</Label>
+                <Input
+                  value={editForm.contactPhone}
+                  onChange={(e) => setEditForm({ ...editForm, contactPhone: e.target.value })}
+                />
+              </div>
+            </div>
+
+            {editLeadData?.policies && editLeadData.policies.length > 0 && (
+              <div className="mt-4 pt-4 border-t space-y-3">
+                <Label className="font-semibold">Vencimentos de Apólices Atuais</Label>
+                <div className="grid grid-cols-2 gap-2">
+                  {editLeadData.policies.map((p) => (
+                    <div key={p.id} className="flex flex-col space-y-1">
+                      <Label className="text-xs">{p.type}</Label>
+                      <Input
+                        type="date"
+                        value={p.expirationDate ? p.expirationDate.split('T')[0] : ''}
+                        onChange={(e) => {
+                          const val = e.target.value ? new Date(e.target.value).toISOString() : ''
+                          updatePolicyDate(editLeadData.id, p.type, val)
+                          setEditLeadData({
+                            ...editLeadData,
+                            policies: editLeadData.policies.map((pol) =>
+                              pol.type === p.type ? { ...pol, expirationDate: val } : pol,
+                            ),
+                          })
+                        }}
+                      />
+                    </div>
+                  ))}
+                </div>
+              </div>
+            )}
+          </div>
+          <DialogFooter>
+            <Button variant="outline" onClick={() => setEditLeadData(null)}>
+              Cancelar
+            </Button>
+            <Button onClick={handleSaveEdit}>Salvar Alterações</Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
       <CardHeader className="pb-0">
         <CardTitle>Lista de Contatos</CardTitle>
         <CardDescription>Gerencie seus clientes e leads importados.</CardDescription>
@@ -420,6 +597,21 @@ function LeadsTable({
                             <DropdownMenuItem onClick={() => onSelect(lead.id)}>
                               <UserCircle className="w-4 h-4 mr-2" /> Perfil & Histórico
                             </DropdownMenuItem>
+
+                            {(isManager || lead.consultantId === me?.id) && (
+                              <>
+                                <DropdownMenuItem onClick={() => handleEditClick(lead)}>
+                                  <Edit className="w-4 h-4 mr-2" /> Editar Lead
+                                </DropdownMenuItem>
+                                <DropdownMenuItem
+                                  onClick={() => setDeleteLeadId(lead.id)}
+                                  className="text-destructive focus:text-destructive focus:bg-destructive/10"
+                                >
+                                  <Trash2 className="w-4 h-4 mr-2" /> Excluir
+                                </DropdownMenuItem>
+                              </>
+                            )}
+
                             {isManager && (
                               <DropdownMenuSub>
                                 <DropdownMenuSubTrigger>
