@@ -1,4 +1,4 @@
-import { Outlet, Link, useLocation } from 'react-router-dom'
+import { Outlet, Link, useLocation, Navigate } from 'react-router-dom'
 import useAppStore from '@/stores/useAppStore'
 import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover'
 import {
@@ -38,6 +38,7 @@ import {
   Sparkles,
   Inbox,
   ShieldCheck,
+  LogOut,
 } from 'lucide-react'
 import { Input } from '@/components/ui/input'
 import { Button } from '@/components/ui/button'
@@ -112,7 +113,12 @@ export function AppSidebar() {
 }
 
 export default function Layout() {
-  const { consultants, currentUser, setCurrentUser, reminders } = useAppStore()
+  const { consultants, currentUser, isAuthenticated, logout, reminders } = useAppStore()
+
+  if (!isAuthenticated) {
+    return <Navigate to="/login" replace />
+  }
+
   const me = consultants.find((c) => c.id === currentUser)
 
   const myReminders =
@@ -189,19 +195,15 @@ export default function Layout() {
                     </Button>
                   </DropdownMenuTrigger>
                   <DropdownMenuContent align="end" className="w-56">
-                    <DropdownMenuLabel>Alternar Visualização</DropdownMenuLabel>
+                    <DropdownMenuLabel>Minha Conta</DropdownMenuLabel>
                     <DropdownMenuSeparator />
-                    {consultants.map((c) => (
-                      <DropdownMenuItem
-                        key={c.id}
-                        onClick={() => setCurrentUser(c.id)}
-                        className={c.id === currentUser ? 'bg-muted font-medium' : ''}
-                      >
-                        <UserCircle className="mr-2 h-4 w-4" />
-                        <span>{c.name}</span>
-                        <span className="ml-auto text-xs text-muted-foreground">{c.role}</span>
-                      </DropdownMenuItem>
-                    ))}
+                    <DropdownMenuItem
+                      onClick={logout}
+                      className="text-destructive focus:text-destructive focus:bg-destructive/10 cursor-pointer"
+                    >
+                      <LogOut className="mr-2 h-4 w-4" />
+                      <span>Sair da conta</span>
+                    </DropdownMenuItem>
                   </DropdownMenuContent>
                 </DropdownMenu>
               </div>

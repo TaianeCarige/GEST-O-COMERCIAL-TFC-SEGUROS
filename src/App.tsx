@@ -18,6 +18,7 @@ import AvailableLeads from './pages/AvailableLeads'
 import Reactivation from './pages/Reactivation'
 import VIPMentor from './pages/VIPMentor'
 import Users from './pages/Users'
+import Login from './pages/Login'
 
 const App = () => (
   <BrowserRouter future={{ v7_startTransition: false, v7_relativeSplatPath: false }}>
@@ -26,6 +27,7 @@ const App = () => (
         <Toaster />
         <Sonner />
         <Routes>
+          <Route path="/login" element={<Login />} />
           <Route element={<Layout />}>
             <Route path="/" element={<Index />} />
             <Route path="/leads" element={<Leads />} />

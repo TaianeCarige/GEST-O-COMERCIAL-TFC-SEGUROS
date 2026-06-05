@@ -66,12 +66,15 @@ export default function Users() {
   const isManager = me?.role === 'Gestora' || me?.role === 'Agência'
 
   const [newName, setNewName] = useState('')
+  const [newEmail, setNewEmail] = useState('')
   const [newRole, setNewRole] = useState<Role>('Consultor')
 
   const handleAddUser = () => {
-    if (!newName) return
+    if (!newName || !newEmail) return
     addConsultant({
       name: newName,
+      email: newEmail,
+      password: 'senha',
       role: newRole,
       color: `hsl(var(--chart-${Math.floor(Math.random() * 5) + 1}))`,
       callsGoal: 100,
@@ -82,14 +85,18 @@ export default function Users() {
       salesRealized: 0,
     })
     setNewName('')
-    toast({ title: 'Usuário Criado', description: 'O novo usuário foi adicionado com sucesso.' })
+    setNewEmail('')
+    toast({
+      title: 'Usuário Criado',
+      description: 'O novo usuário foi adicionado com sucesso. A senha padrão é "senha".',
+    })
   }
 
   const handleResetPassword = (id: string) => {
     resetPassword(id)
     toast({
       title: 'Senha Resetada',
-      description: 'Um link de recuperação foi enviado para o email do usuário.',
+      description: 'A senha do usuário foi redefinida para "senha".',
     })
   }
 
@@ -160,6 +167,15 @@ export default function Users() {
                   />
                 </div>
                 <div className="space-y-2">
+                  <Label>Email</Label>
+                  <Input
+                    type="email"
+                    value={newEmail}
+                    onChange={(e) => setNewEmail(e.target.value)}
+                    placeholder="Ex: ana@tfc.com.br"
+                  />
+                </div>
+                <div className="space-y-2">
                   <Label>Nível de Acesso (Cargo)</Label>
                   <Select value={newRole} onValueChange={(v: Role) => setNewRole(v)}>
                     <SelectTrigger>
@@ -172,7 +188,11 @@ export default function Users() {
                     </SelectContent>
                   </Select>
                 </div>
-                <Button className="w-full mt-2" onClick={handleAddUser} disabled={!newName.trim()}>
+                <Button
+                  className="w-full mt-2"
+                  onClick={handleAddUser}
+                  disabled={!newName.trim() || !newEmail.trim()}
+                >
                   Criar Acesso
                 </Button>
               </CardContent>
@@ -189,6 +209,7 @@ export default function Users() {
                     <TableHeader>
                       <TableRow>
                         <TableHead>Nome</TableHead>
+                        <TableHead>Email</TableHead>
                         <TableHead>Perfil</TableHead>
                         <TableHead className="text-right">Ações</TableHead>
                       </TableRow>
@@ -197,6 +218,7 @@ export default function Users() {
                       {consultants.map((c) => (
                         <TableRow key={c.id}>
                           <TableCell className="font-medium">{c.name}</TableCell>
+                          <TableCell className="text-muted-foreground text-sm">{c.email}</TableCell>
                           <TableCell>
                             <Badge
                               variant={

@@ -1,4 +1,4 @@
-import React, { createContext, useContext, useState, ReactNode } from 'react'
+import React, { createContext, useContext, useState, useEffect, ReactNode } from 'react'
 
 export type Branch =
   | 'Automóveis/Frotas'
@@ -52,6 +52,8 @@ export interface Category {
 export interface Consultant {
   id: string
   name: string
+  email: string
+  password?: string
   color: string
   role: Role
   managerId?: string
@@ -134,6 +136,8 @@ const MOCK_CONSULTANTS: Consultant[] = [
   {
     id: '1',
     name: 'Taiane',
+    email: 'taiane@tfc.com.br',
+    password: 'senha',
     color: 'hsl(var(--chart-1))',
     role: 'Gestora',
     callsGoal: 0,
@@ -146,6 +150,8 @@ const MOCK_CONSULTANTS: Consultant[] = [
   {
     id: '2',
     name: 'Carlos',
+    email: 'carlos@tfc.com.br',
+    password: 'senha',
     color: 'hsl(var(--chart-2))',
     role: 'Gestora',
     managerId: '1',
@@ -159,6 +165,8 @@ const MOCK_CONSULTANTS: Consultant[] = [
   {
     id: '3',
     name: 'Mariana',
+    email: 'mariana@tfc.com.br',
+    password: 'senha',
     color: 'hsl(var(--chart-3))',
     role: 'Consultor',
     managerId: '2',
@@ -172,6 +180,8 @@ const MOCK_CONSULTANTS: Consultant[] = [
   {
     id: '4',
     name: 'João',
+    email: 'joao@tfc.com.br',
+    password: 'senha',
     color: 'hsl(var(--chart-4))',
     role: 'Consultor',
     managerId: '2',
@@ -321,8 +331,10 @@ const DEFAULT_PERMISSIONS: RolePermissions = {
 }
 
 interface AppStore {
+  isAuthenticated: boolean
+  login: (email: string, password?: string) => boolean
+  logout: () => void
   currentUser: string
-  setCurrentUser: (id: string) => void
   permissions: RolePermissions
   updatePermission: (role: Role, key: PermissionKey, value: boolean) => void
   categories: Category[]
@@ -361,31 +373,103 @@ interface AppStore {
 
 const AppContext = createContext<AppStore | undefined>(undefined)
 
+const getInitialState = <T,>(key: string, defaultValue: T): T => {
+  try {
+    const stored = localStorage.getItem(`tfc_${key}`)
+    if (stored) {
+      return JSON.parse(stored)
+    }
+  } catch (e) {
+    console.error('Error reading localStorage', e)
+  }
+  return defaultValue
+}
+
 export function AppStoreProvider({ children }: { children: ReactNode }) {
-  const [currentUser, setCurrentUser] = useState<string>('1')
-  const [permissions, setPermissions] = useState<RolePermissions>(DEFAULT_PERMISSIONS)
-  const [categories, setCategories] = useState<Category[]>([
-    { id: '1327', name: '1327', isSystem: true },
-    { id: 'Corporate', name: 'Corporate', isSystem: true },
-  ])
-  const [leads, setLeads] = useState<Lead[]>(MOCK_LEADS)
-  const [availableLeads, setAvailableLeads] = useState<AvailableLead[]>(MOCK_AVAILABLE_LEADS)
-  const [consultants, setConsultants] = useState<Consultant[]>(MOCK_CONSULTANTS)
-  const [gerentes1327, setGerentes1327] = useState<Gerente1327[]>([
-    { id: 'g1', name: 'Gerente João' },
-    { id: 'g2', name: 'Gerente Maria' },
-  ])
-  const [reminders, setReminders] = useState<Reminder[]>([
-    {
-      id: 'r1',
-      userId: '1',
-      description: 'Follow up com Indústrias Sigma',
-      dateTime: new Date(Date.now() + 2 * 60 * 60 * 1000).toISOString(),
-      observations: 'Revisar apólice atual e propor cross-sell',
-      status: 'Pendente',
-      history: [],
-    },
-  ])
+  const [isAuthenticated, setIsAuthenticated] = useState<boolean>(
+    getInitialState('isAuthenticated', false),
+  )
+  const [currentUser, setCurrentUser] = useState<string>(getInitialState('currentUser', ''))
+  const [permissions, setPermissions] = useState<RolePermissions>(
+    getInitialState('permissions', DEFAULT_PERMISSIONS),
+  )
+  const [categories, setCategories] = useState<Category[]>(
+    getInitialState('categories', [
+      { id: '1327', name: '1327', isSystem: true },
+      { id: 'Corporate', name: 'Corporate', isSystem: true },
+    ]),
+  )
+  const [leads, setLeads] = useState<Lead[]>(getInitialState('leads', MOCK_LEADS))
+  const [availableLeads, setAvailableLeads] = useState<AvailableLead[]>(
+    getInitialState('availableLeads', MOCK_AVAILABLE_LEADS),
+  )
+  const [consultants, setConsultants] = useState<Consultant[]>(
+    getInitialState('consultants', MOCK_CONSULTANTS),
+  )
+  const [gerentes1327, setGerentes1327] = useState<Gerente1327[]>(
+    getInitialState('gerentes1327', [
+      { id: 'g1', name: 'Gerente João' },
+      { id: 'g2', name: 'Gerente Maria' },
+    ]),
+  )
+  const [reminders, setReminders] = useState<Reminder[]>(
+    getInitialState('reminders', [
+      {
+        id: 'r1',
+        userId: '1',
+        description: 'Follow up com Indústrias Sigma',
+        dateTime: new Date(Date.now() + 2 * 60 * 60 * 1000).toISOString(),
+        observations: 'Revisar apólice atual e propor cross-sell',
+        status: 'Pendente',
+        history: [],
+      },
+    ]),
+  )
+
+  useEffect(() => {
+    localStorage.setItem('tfc_isAuthenticated', JSON.stringify(isAuthenticated))
+  }, [isAuthenticated])
+  useEffect(() => {
+    localStorage.setItem('tfc_currentUser', JSON.stringify(currentUser))
+  }, [currentUser])
+  useEffect(() => {
+    localStorage.setItem('tfc_permissions', JSON.stringify(permissions))
+  }, [permissions])
+  useEffect(() => {
+    localStorage.setItem('tfc_categories', JSON.stringify(categories))
+  }, [categories])
+  useEffect(() => {
+    localStorage.setItem('tfc_leads', JSON.stringify(leads))
+  }, [leads])
+  useEffect(() => {
+    localStorage.setItem('tfc_availableLeads', JSON.stringify(availableLeads))
+  }, [availableLeads])
+  useEffect(() => {
+    localStorage.setItem('tfc_consultants', JSON.stringify(consultants))
+  }, [consultants])
+  useEffect(() => {
+    localStorage.setItem('tfc_gerentes1327', JSON.stringify(gerentes1327))
+  }, [gerentes1327])
+  useEffect(() => {
+    localStorage.setItem('tfc_reminders', JSON.stringify(reminders))
+  }, [reminders])
+
+  const login = (email: string, password?: string) => {
+    const user = consultants.find(
+      (c) => c.email.toLowerCase() === email.toLowerCase() && c.password === password,
+    )
+    if (user) {
+      setCurrentUser(user.id)
+      setIsAuthenticated(true)
+      return true
+    }
+    return false
+  }
+
+  const logout = () => {
+    setCurrentUser('')
+    setIsAuthenticated(false)
+  }
 
   const addCategory = (name: string) => {
     setCategories((prev) => [...prev, { id: `cat-${Date.now()}`, name }])
@@ -631,7 +715,7 @@ export function AppStoreProvider({ children }: { children: ReactNode }) {
   }
 
   const resetPassword = (id: string) => {
-    console.log(`Reset password for consultant ${id}`)
+    setConsultants((prev) => prev.map((c) => (c.id === id ? { ...c, password: 'senha' } : c)))
   }
 
   const updateConsultantGoals = (
@@ -655,8 +739,10 @@ export function AppStoreProvider({ children }: { children: ReactNode }) {
     AppContext.Provider,
     {
       value: {
+        isAuthenticated,
+        login,
+        logout,
         currentUser,
-        setCurrentUser,
         permissions,
         updatePermission,
         categories,
