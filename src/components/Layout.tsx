@@ -133,15 +133,12 @@ export default function Layout() {
   const [newPassword, setNewPassword] = useState('')
   const [confirmNewPassword, setConfirmNewPassword] = useState('')
 
-  if (!isAuthenticated) {
-    return <Navigate to="/login" replace />
-  }
-
-  const me = consultants.find((c) => c.id === currentUser)
+  // Removed authentication wall to allow unrestricted access
+  const me = consultants.find((c) => c.id === currentUser) || consultants[0]
 
   const handleUpdatePassword = () => {
     if (!me) return
-    if (me.password !== currentPassword) {
+    if (me.password && me.password !== currentPassword) {
       toast({
         title: 'Erro',
         description: 'A senha atual está incorreta.',
@@ -177,8 +174,9 @@ export default function Layout() {
     setConfirmNewPassword('')
   }
 
+  const activeUserId = currentUser || me?.id || ''
   const myReminders =
-    reminders?.filter((r) => r.userId === currentUser && r.status === 'Pendente') || []
+    reminders?.filter((r) => r.userId === activeUserId && r.status === 'Pendente') || []
   const upcomingReminders = myReminders.filter((r) => {
     const timeDiff = new Date(r.dateTime).getTime() - new Date().getTime()
     return timeDiff > 0 && timeDiff <= 24 * 60 * 60 * 1000 // up to 24 hours

@@ -359,6 +359,7 @@ interface AppStore {
     id: string,
     goals: { callsGoal: number; visitsGoal: number; salesGoal: number },
   ) => void
+  updateConsultant: (id: string, data: Partial<Consultant>) => void
   importLeads: (gerenteId: string, category: string) => void
   addConsultant: (consultant: Omit<Consultant, 'id'>) => void
   resetPassword: (id: string) => void
@@ -724,6 +725,10 @@ export function AppStoreProvider({ children }: { children: ReactNode }) {
     setConsultants((prev) => prev.map((c) => (c.id === id ? { ...c, password: newPassword } : c)))
   }
 
+  const updateConsultant = (id: string, data: Partial<Consultant>) => {
+    setConsultants((prev) => prev.map((c) => (c.id === id ? { ...c, ...data } : c)))
+  }
+
   const register = (name: string, email: string, password: string) => {
     const existing = consultants.find((c) => c.email.toLowerCase() === email.toLowerCase())
     if (existing) {
@@ -800,6 +805,7 @@ export function AppStoreProvider({ children }: { children: ReactNode }) {
         updatePassword,
         register,
         updateConsultantGoals,
+        updateConsultant,
         reminders,
         addReminder,
         updateReminderStatus,

@@ -10,7 +10,9 @@ import { Progress } from '@/components/ui/progress'
 export default function Index() {
   const { leads, consultants, currentUser } = useAppStore()
 
-  const me = consultants.find((c) => c.id === currentUser)
+  const me = consultants.find((c) => c.id === currentUser) || consultants[0]
+  const activeUserId = currentUser || me?.id
+
   const isAgency = me?.role === 'Agência'
   const isManager = me?.role === 'Gestora' || isAgency
 
@@ -22,7 +24,7 @@ export default function Index() {
             consultants.find((c) => c.id === l.consultantId)?.managerId === me?.id ||
             l.consultantId === me?.id,
         )
-      : leads.filter((l) => l.consultantId === currentUser)
+      : leads.filter((l) => l.consultantId === activeUserId)
 
   const totalSales = visibleLeads
     .filter((l) => ['Fechado', 'Fechamento'].includes(l.status))

@@ -1,5 +1,5 @@
 import React, { useState } from 'react'
-import useAppStore, { Role, PermissionKey } from '@/stores/useAppStore'
+import useAppStore, { Role, PermissionKey, Consultant } from '@/stores/useAppStore'
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
@@ -19,8 +19,7 @@ import {
   TableHeader,
   TableRow,
 } from '@/components/ui/table'
-import { Badge } from '@/components/ui/badge'
-import { ShieldAlert, KeyRound, UserPlus, Database } from 'lucide-react'
+import { ShieldAlert, UserPlus, Database, Save, Eye, EyeOff } from 'lucide-react'
 import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert'
 import { useToast } from '@/hooks/use-toast'
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs'
@@ -56,25 +55,108 @@ const PERMISSIONS_LIST: { key: PermissionKey; label: string; desc: string }[] = 
   },
 ]
 
-export default function Users() {
-  const { consultants, currentUser, addConsultant, resetPassword, permissions, updatePermission } =
-    useAppStore()
+function EditableUserRow({ user }: { user: Consultant }) {
+  const { updateConsultant } = useAppStore()
   const { toast } = useToast()
 
-  const me = consultants.find((c) => c.id === currentUser)
+  const [name, setName] = useState(user.name)
+  const [email, setEmail] = useState(user.email)
+  const [role, setRole] = useState<Role>(user.role)
+  const [password, setPassword] = useState(user.password || '')
+  const [showPassword, setShowPassword] = useState(false)
+
+  const hasChanges =
+    name !== user.name || email !== user.email || role !== user.role || password !== user.password
+
+  const handleSave = () => {
+    updateConsultant(user.id, { name, email, role, password })
+    toast({
+      title: 'Usuário Atualizado',
+      description: 'As alterações foram salvas com sucesso.',
+    })
+  }
+
+  return (
+    <TableRow>
+      <TableCell className="p-2">
+        <Input
+          value={name}
+          onChange={(e) => setName(e.target.value)}
+          className="h-9 min-w-[120px]"
+        />
+      </TableCell>
+      <TableCell className="p-2">
+        <Input
+          type="email"
+          value={email}
+          onChange={(e) => setEmail(e.target.value)}
+          className="h-9 min-w-[160px]"
+        />
+      </TableCell>
+      <TableCell className="p-2">
+        <Select value={role} onValueChange={(v: Role) => setRole(v)}>
+          <SelectTrigger className="h-9 w-[130px]">
+            <SelectValue />
+          </SelectTrigger>
+          <SelectContent>
+            <SelectItem value="Consultor">Consultor</SelectItem>
+            <SelectItem value="Gestora">Gestora</SelectItem>
+            <SelectItem value="Agência">Agência</SelectItem>
+          </SelectContent>
+        </Select>
+      </TableCell>
+      <TableCell className="p-2">
+        <div className="flex items-center gap-1">
+          <Input
+            type={showPassword ? 'text' : 'password'}
+            value={password}
+            onChange={(e) => setPassword(e.target.value)}
+            className="h-9 w-[140px]"
+            placeholder="Senha..."
+          />
+          <Button
+            variant="ghost"
+            size="icon"
+            className="h-9 w-9 shrink-0"
+            onClick={() => setShowPassword(!showPassword)}
+          >
+            {showPassword ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
+          </Button>
+        </div>
+      </TableCell>
+      <TableCell className="p-2 text-right">
+        <Button
+          size="sm"
+          onClick={handleSave}
+          disabled={!hasChanges}
+          className="h-9 w-full md:w-auto whitespace-nowrap"
+        >
+          <Save className="w-4 h-4 mr-2 hidden md:block" /> Salvar
+        </Button>
+      </TableCell>
+    </TableRow>
+  )
+}
+
+export default function Users() {
+  const { consultants, currentUser, addConsultant, permissions, updatePermission } = useAppStore()
+  const { toast } = useToast()
+
+  const me = consultants.find((c) => c.id === currentUser) || consultants[0]
   const myPermissions = permissions[me?.role || 'Consultor']
   const isManager = me?.role === 'Gestora' || me?.role === 'Agência'
 
   const [newName, setNewName] = useState('')
   const [newEmail, setNewEmail] = useState('')
+  const [newPassword, setNewPassword] = useState('')
   const [newRole, setNewRole] = useState<Role>('Consultor')
 
   const handleAddUser = () => {
-    if (!newName || !newEmail) return
+    if (!newName.trim() || !newEmail.trim() || !newPassword.trim()) return
     addConsultant({
       name: newName,
       email: newEmail,
-      password: 'senha',
+      password: newPassword,
       role: newRole,
       color: `hsl(var(--chart-${Math.floor(Math.random() * 5) + 1}))`,
       callsGoal: 100,
@@ -86,17 +168,11 @@ export default function Users() {
     })
     setNewName('')
     setNewEmail('')
+    setNewPassword('')
+    setNewRole('Consultor')
     toast({
       title: 'Usuário Criado',
-      description: 'O novo usuário foi adicionado com sucesso. A senha padrão é "senha".',
-    })
-  }
-
-  const handleResetPassword = (id: string) => {
-    resetPassword(id)
-    toast({
-      title: 'Senha Resetada',
-      description: 'A senha do usuário foi redefinida para "senha".',
+      description: 'O novo usuário foi adicionado com sucesso.',
     })
   }
 
@@ -135,10 +211,9 @@ export default function Users() {
           Nota sobre Persistência de Dados
         </AlertTitle>
         <AlertDescription className="text-muted-foreground mt-1">
-          As alterações de permissões e usuários estão sendo salvas no state temporário. Para
-          persistência definitiva e aplicação segura do RBAC, conecte com o banco de dados (Supabase
-          ou Skip Cloud). É necessário para persistir contas de usuários, permissões e histórico de
-          ações permanentemente.
+          Como o banco de dados ainda não está conectado (Supabase ou Skip Cloud), todos os usuários
+          registrados e senhas estão sendo salvos apenas na sessão atual do navegador e serão
+          perdidos ao atualizar a página.
         </AlertDescription>
       </Alert>
 
@@ -149,15 +224,17 @@ export default function Users() {
         </TabsList>
 
         <TabsContent value="equipe" className="space-y-6">
-          <div className="grid md:grid-cols-3 gap-6">
-            <Card className="md:col-span-1 h-fit">
-              <CardHeader>
-                <CardTitle className="flex items-center gap-2">
-                  <UserPlus className="w-5 h-5" /> Novo Usuário
-                </CardTitle>
-                <CardDescription>Crie um novo acesso ao sistema.</CardDescription>
-              </CardHeader>
-              <CardContent className="space-y-4">
+          <Card className="h-fit">
+            <CardHeader>
+              <CardTitle className="flex items-center gap-2">
+                <UserPlus className="w-5 h-5" /> Novo Usuário
+              </CardTitle>
+              <CardDescription>
+                Crie um novo acesso ao sistema e defina sua senha inicial.
+              </CardDescription>
+            </CardHeader>
+            <CardContent>
+              <div className="grid md:grid-cols-5 gap-4 items-end">
                 <div className="space-y-2">
                   <Label>Nome Completo</Label>
                   <Input
@@ -176,79 +253,66 @@ export default function Users() {
                   />
                 </div>
                 <div className="space-y-2">
-                  <Label>Nível de Acesso (Cargo)</Label>
+                  <Label>Nível de Acesso</Label>
                   <Select value={newRole} onValueChange={(v: Role) => setNewRole(v)}>
                     <SelectTrigger>
                       <SelectValue />
                     </SelectTrigger>
                     <SelectContent>
-                      <SelectItem value="Consultor">Colaborador / Consultor</SelectItem>
+                      <SelectItem value="Consultor">Consultor</SelectItem>
                       <SelectItem value="Gestora">Gestora</SelectItem>
-                      <SelectItem value="Agência">Agência (Admin)</SelectItem>
+                      <SelectItem value="Agência">Agência</SelectItem>
                     </SelectContent>
                   </Select>
                 </div>
+                <div className="space-y-2">
+                  <Label>Senha</Label>
+                  <Input
+                    type="password"
+                    value={newPassword}
+                    onChange={(e) => setNewPassword(e.target.value)}
+                    placeholder="Senha inicial"
+                  />
+                </div>
                 <Button
-                  className="w-full mt-2"
+                  className="w-full"
                   onClick={handleAddUser}
-                  disabled={!newName.trim() || !newEmail.trim()}
+                  disabled={!newName.trim() || !newEmail.trim() || !newPassword.trim()}
                 >
                   Criar Acesso
                 </Button>
-              </CardContent>
-            </Card>
+              </div>
+            </CardContent>
+          </Card>
 
-            <Card className="md:col-span-2">
-              <CardHeader>
-                <CardTitle>Equipe Cadastrada</CardTitle>
-                <CardDescription>Gerencie as senhas dos colaboradores ativos.</CardDescription>
-              </CardHeader>
-              <CardContent>
-                <div className="border rounded-md">
-                  <Table>
-                    <TableHeader>
-                      <TableRow>
-                        <TableHead>Nome</TableHead>
-                        <TableHead>Email</TableHead>
-                        <TableHead>Perfil</TableHead>
-                        <TableHead className="text-right">Ações</TableHead>
-                      </TableRow>
-                    </TableHeader>
-                    <TableBody>
-                      {consultants.map((c) => (
-                        <TableRow key={c.id}>
-                          <TableCell className="font-medium">{c.name}</TableCell>
-                          <TableCell className="text-muted-foreground text-sm">{c.email}</TableCell>
-                          <TableCell>
-                            <Badge
-                              variant={
-                                c.role === 'Gestora' || c.role === 'Agência'
-                                  ? 'default'
-                                  : 'secondary'
-                              }
-                              className={c.role === 'Gestora' ? 'bg-primary/80' : ''}
-                            >
-                              {c.role === 'Consultor' ? 'Colaborador' : c.role}
-                            </Badge>
-                          </TableCell>
-                          <TableCell className="text-right">
-                            <Button
-                              variant="ghost"
-                              size="sm"
-                              onClick={() => handleResetPassword(c.id)}
-                            >
-                              <KeyRound className="w-4 h-4 mr-2 text-muted-foreground" /> Resetar
-                              Senha
-                            </Button>
-                          </TableCell>
-                        </TableRow>
-                      ))}
-                    </TableBody>
-                  </Table>
-                </div>
-              </CardContent>
-            </Card>
-          </div>
+          <Card>
+            <CardHeader>
+              <CardTitle>Equipe Cadastrada</CardTitle>
+              <CardDescription>
+                Edite nomes, perfis e senhas dos colaboradores ativos.
+              </CardDescription>
+            </CardHeader>
+            <CardContent>
+              <div className="border rounded-md overflow-x-auto">
+                <Table>
+                  <TableHeader>
+                    <TableRow>
+                      <TableHead>Nome</TableHead>
+                      <TableHead>Email</TableHead>
+                      <TableHead>Perfil</TableHead>
+                      <TableHead>Senha</TableHead>
+                      <TableHead className="text-right">Ações</TableHead>
+                    </TableRow>
+                  </TableHeader>
+                  <TableBody>
+                    {consultants.map((c) => (
+                      <EditableUserRow key={c.id} user={c} />
+                    ))}
+                  </TableBody>
+                </Table>
+              </div>
+            </CardContent>
+          </Card>
         </TabsContent>
 
         {isManager && (
@@ -268,7 +332,7 @@ export default function Users() {
                         <TableHead className="w-[300px]">Funcionalidade</TableHead>
                         <TableHead className="text-center">Agência</TableHead>
                         <TableHead className="text-center">Gestora</TableHead>
-                        <TableHead className="text-center">Colaborador</TableHead>
+                        <TableHead className="text-center">Consultor</TableHead>
                       </TableRow>
                     </TableHeader>
                     <TableBody>
