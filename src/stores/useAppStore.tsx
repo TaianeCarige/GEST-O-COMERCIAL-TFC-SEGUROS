@@ -43,6 +43,12 @@ export type PolicyType =
   | 'Seguros Patrimoniais'
   | 'Outros'
 
+export interface Category {
+  id: string
+  name: string
+  isSystem?: boolean
+}
+
 export interface Consultant {
   id: string
   name: string
@@ -87,7 +93,7 @@ export interface Lead {
   scheduledDate?: string
   policies: Policy[]
   history: Interaction[]
-  category?: '1327' | 'Corporate'
+  category?: string
   gerenteId?: string
 }
 
@@ -319,7 +325,12 @@ interface AppStore {
   setCurrentUser: (id: string) => void
   permissions: RolePermissions
   updatePermission: (role: Role, key: PermissionKey, value: boolean) => void
+  categories: Category[]
+  addCategory: (name: string) => void
+  renameCategory: (id: string, name: string) => void
+  deleteCategory: (id: string) => void
   leads: Lead[]
+  addLead: (lead: Omit<Lead, 'id'>) => void
   availableLeads: AvailableLead[]
   consultants: Consultant[]
   gerentes1327: Gerente1327[]
@@ -336,7 +347,7 @@ interface AppStore {
     id: string,
     goals: { callsGoal: number; visitsGoal: number; salesGoal: number },
   ) => void
-  importLeads: (gerenteId: string, category: '1327' | 'Corporate') => void
+  importLeads: (gerenteId: string, category: string) => void
   addConsultant: (consultant: Omit<Consultant, 'id'>) => void
   resetPassword: (id: string) => void
   reminders: Reminder[]
@@ -353,6 +364,10 @@ const AppContext = createContext<AppStore | undefined>(undefined)
 export function AppStoreProvider({ children }: { children: ReactNode }) {
   const [currentUser, setCurrentUser] = useState<string>('1')
   const [permissions, setPermissions] = useState<RolePermissions>(DEFAULT_PERMISSIONS)
+  const [categories, setCategories] = useState<Category[]>([
+    { id: '1327', name: '1327', isSystem: true },
+    { id: 'Corporate', name: 'Corporate', isSystem: true },
+  ])
   const [leads, setLeads] = useState<Lead[]>(MOCK_LEADS)
   const [availableLeads, setAvailableLeads] = useState<AvailableLead[]>(MOCK_AVAILABLE_LEADS)
   const [consultants, setConsultants] = useState<Consultant[]>(MOCK_CONSULTANTS)
@@ -371,6 +386,19 @@ export function AppStoreProvider({ children }: { children: ReactNode }) {
       history: [],
     },
   ])
+
+  const addCategory = (name: string) => {
+    setCategories((prev) => [...prev, { id: `cat-${Date.now()}`, name }])
+  }
+
+  const renameCategory = (id: string, name: string) => {
+    setCategories((prev) => prev.map((c) => (c.id === id ? { ...c, name } : c)))
+  }
+
+  const deleteCategory = (id: string) => {
+    setCategories((prev) => prev.filter((c) => c.id !== id))
+    setLeads((prev) => prev.filter((l) => l.category !== id))
+  }
 
   const addReminder = (reminder: Omit<Reminder, 'id' | 'userId' | 'history'>) => {
     setReminders((prev) => [
@@ -433,6 +461,10 @@ export function AppStoreProvider({ children }: { children: ReactNode }) {
 
   const getConsultant = (id: string) => consultants.find((c) => c.id === id)
 
+  const addLead = (lead: Omit<Lead, 'id'>) => {
+    setLeads((prev) => [...prev, { ...lead, id: `l-${Date.now()}` }])
+  }
+
   const claimLead = (leadId: string) => {
     const leadToClaim = availableLeads.find((l) => l.id === leadId)
     if (leadToClaim) {
@@ -449,6 +481,7 @@ export function AppStoreProvider({ children }: { children: ReactNode }) {
           value: leadToClaim.value,
           policies: [],
           history: [],
+          category: 'Corporate',
         },
       ])
     }
@@ -576,7 +609,7 @@ export function AppStoreProvider({ children }: { children: ReactNode }) {
     setGerentes1327((prev) => [...prev, { id: `g-${Date.now()}`, name }])
   }
 
-  const importLeads = (gerenteId: string, category: '1327' | 'Corporate') => {
+  const importLeads = (gerenteId: string, category: string) => {
     const newLead: Lead = {
       id: `imported-${Date.now()}`,
       name: 'Lead Importado ' + Math.floor(Math.random() * 1000),
@@ -626,7 +659,12 @@ export function AppStoreProvider({ children }: { children: ReactNode }) {
         setCurrentUser,
         permissions,
         updatePermission,
+        categories,
+        addCategory,
+        renameCategory,
+        deleteCategory,
         leads,
+        addLead,
         availableLeads,
         consultants,
         gerentes1327,

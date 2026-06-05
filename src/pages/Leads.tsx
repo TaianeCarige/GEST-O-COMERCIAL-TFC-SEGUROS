@@ -1,5 +1,5 @@
 import React, { useState } from 'react'
-import useAppStore, { Branch, Status, PolicyType, Lead } from '@/stores/useAppStore'
+import useAppStore, { Branch, Status, PolicyType, Lead, Category } from '@/stores/useAppStore'
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card'
 import {
   Table,
@@ -67,12 +67,12 @@ import {
   Save,
   Upload,
   Plus,
-  RefreshCw,
   Sparkles,
   CalendarDays,
   Copy,
   Edit,
   Trash2,
+  Pencil,
 } from 'lucide-react'
 import { Navigate } from 'react-router-dom'
 
@@ -120,6 +120,11 @@ export default function Leads() {
     addGerente1327,
     importLeads,
     permissions,
+    categories,
+    addCategory,
+    renameCategory,
+    deleteCategory,
+    addLead,
   } = useAppStore()
   const { toast } = useToast()
 
@@ -128,25 +133,35 @@ export default function Leads() {
   const isAgency = me?.role === 'Agência'
   const isManager = me?.role === 'Gestora' || isAgency
 
-  const [mainCategory, setMainCategory] = useState<'1327' | 'Corporate'>('1327')
+  const defaultTab =
+    categories.find((c) => myPermissions[`tab_${c.id.toLowerCase()}` as any] ?? true)?.id ||
+    categories[0]?.id
+  const [mainCategory, setMainCategory] = useState<string>(defaultTab)
 
-  React.useEffect(() => {
-    if (!myPermissions.tab_1327 && myPermissions.tab_corporate && mainCategory === '1327') {
-      setMainCategory('Corporate')
-    } else if (
-      !myPermissions.tab_corporate &&
-      myPermissions.tab_1327 &&
-      mainCategory === 'Corporate'
-    ) {
-      setMainCategory('1327')
-    }
-  }, [myPermissions.tab_1327, myPermissions.tab_corporate, mainCategory])
   const [gerenteTab, setGerenteTab] = useState<string>(gerentes1327[0]?.id || '')
   const [newGerenteName, setNewGerenteName] = useState('')
   const [isAddGerenteOpen, setIsAddGerenteOpen] = useState(false)
 
   const [branchFilter, setBranchFilter] = useState<Branch | 'Todos'>('Todos')
   const [selectedLeadId, setSelectedLeadId] = useState<string | null>(null)
+
+  // Tabs management UI
+  const [isAddTabOpen, setIsAddTabOpen] = useState(false)
+  const [newTabName, setNewTabName] = useState('')
+  const [editTabCategory, setEditTabCategory] = useState<Category | null>(null)
+  const [editTabName, setEditTabName] = useState('')
+  const [deleteTabCategory, setDeleteTabCategory] = useState<Category | null>(null)
+
+  // Add Lead UI
+  const [isAddLeadOpen, setIsAddLeadOpen] = useState(false)
+  const [newLeadForm, setNewLeadForm] = useState({
+    name: '',
+    cnpj: '',
+    industry: '',
+    contactName: '',
+    contactPhone: '',
+    branch: 'Saúde' as Branch,
+  })
 
   const handleAddGerente = () => {
     if (!newGerenteName.trim()) return
@@ -161,20 +176,76 @@ export default function Leads() {
     toast({ title: 'Planilha Importada', description: 'Leads carregados com sucesso.' })
   }
 
+  const handleAddTab = () => {
+    if (!newTabName.trim()) return
+    addCategory(newTabName)
+    setNewTabName('')
+    setIsAddTabOpen(false)
+    toast({ title: 'Aba Adicionada', description: 'Nova categoria criada com sucesso.' })
+  }
+
+  const handleEditTab = () => {
+    if (!editTabCategory || !editTabName.trim()) return
+    renameCategory(editTabCategory.id, editTabName)
+    setEditTabCategory(null)
+    setEditTabName('')
+    toast({ title: 'Aba Renomeada', description: 'Categoria atualizada com sucesso.' })
+  }
+
+  const handleDeleteTabConfirm = () => {
+    if (!deleteTabCategory) return
+    deleteCategory(deleteTabCategory.id)
+    if (mainCategory === deleteTabCategory.id) {
+      setMainCategory(defaultTab)
+    }
+    setDeleteTabCategory(null)
+    toast({ title: 'Aba Excluída', description: 'Categoria removida com sucesso.' })
+  }
+
+  const handleAddLead = () => {
+    if (!newLeadForm.name) return
+    addLead({
+      name: newLeadForm.name,
+      cnpj: newLeadForm.cnpj,
+      industry: newLeadForm.industry,
+      contactName: newLeadForm.contactName,
+      contactPhone: newLeadForm.contactPhone,
+      branch: newLeadForm.branch,
+      status: 'Prospecção',
+      lastContact: new Date().toISOString(),
+      consultantId: currentUser,
+      value: 0,
+      policies: [],
+      history: [],
+      category: mainCategory,
+      gerenteId: mainCategory === '1327' ? gerenteTab : undefined,
+    })
+    setIsAddLeadOpen(false)
+    setNewLeadForm({
+      name: '',
+      cnpj: '',
+      industry: '',
+      contactName: '',
+      contactPhone: '',
+      branch: 'Saúde',
+    })
+    toast({ title: 'Lead Adicionado', description: 'Lead criado com sucesso.' })
+  }
+
   const visibleLeads = isAgency
     ? leads
     : isManager
       ? leads.filter(
           (l) =>
-            consultants.find((c) => c.id === l.consultantId)?.managerId === me.id ||
-            l.consultantId === me.id,
+            consultants.find((c) => c.id === l.consultantId)?.managerId === me?.id ||
+            l.consultantId === me?.id,
         )
       : leads.filter((l) => l.consultantId === currentUser)
 
   const categorizedLeads = visibleLeads
     .filter((l) => {
       if (mainCategory === '1327') return l.category === '1327' && l.gerenteId === gerenteTab
-      return l.category === 'Corporate'
+      return l.category === mainCategory
     })
     .filter((l) => {
       if (branchFilter !== 'Todos' && l.branch !== branchFilter) return false
@@ -191,10 +262,13 @@ export default function Leads() {
         <div>
           <h1 className="text-3xl font-bold tracking-tight">Leads & Clientes</h1>
           <p className="text-muted-foreground mt-1">
-            Navegação hierárquica por categoria e gestor.
+            Organize e gerencie seus contatos por categoria.
           </p>
         </div>
         <div className="flex flex-wrap items-center gap-2">
+          <Button onClick={() => setIsAddLeadOpen(true)}>
+            <Plus className="w-4 h-4 mr-2" /> Novo Lead
+          </Button>
           <Select value={branchFilter} onValueChange={(val) => setBranchFilter(val as any)}>
             <SelectTrigger className="w-[180px]">
               <Filter className="w-4 h-4 mr-2 text-muted-foreground" />
@@ -211,71 +285,273 @@ export default function Leads() {
         </div>
       </div>
 
+      <Dialog open={isAddTabOpen} onOpenChange={setIsAddTabOpen}>
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>Adicionar Nova Aba</DialogTitle>
+          </DialogHeader>
+          <div className="py-4">
+            <Label>Nome da Categoria</Label>
+            <Input
+              value={newTabName}
+              onChange={(e) => setNewTabName(e.target.value)}
+              placeholder="Ex: Novos Negócios"
+              className="mt-2"
+            />
+          </div>
+          <DialogFooter>
+            <Button onClick={handleAddTab}>Salvar</Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
+      <Dialog open={!!editTabCategory} onOpenChange={(open) => !open && setEditTabCategory(null)}>
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>Renomear Aba</DialogTitle>
+          </DialogHeader>
+          <div className="py-4">
+            <Label>Nome da Categoria</Label>
+            <Input
+              value={editTabName}
+              onChange={(e) => setEditTabName(e.target.value)}
+              className="mt-2"
+            />
+          </div>
+          <DialogFooter>
+            <Button onClick={handleEditTab}>Salvar Alterações</Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
+      <AlertDialog
+        open={!!deleteTabCategory}
+        onOpenChange={(open) => !open && setDeleteTabCategory(null)}
+      >
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>Excluir Aba?</AlertDialogTitle>
+            <AlertDialogDescription>
+              Tem certeza que deseja excluir esta aba e todos os leads vinculados a ela?
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel>Cancelar</AlertDialogCancel>
+            <AlertDialogAction
+              onClick={handleDeleteTabConfirm}
+              className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
+            >
+              Excluir
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
+
+      <Dialog open={isAddLeadOpen} onOpenChange={setIsAddLeadOpen}>
+        <DialogContent className="sm:max-w-[500px]">
+          <DialogHeader>
+            <DialogTitle>Adicionar Novo Lead</DialogTitle>
+          </DialogHeader>
+          <div className="grid gap-4 py-4 max-h-[60vh] overflow-y-auto">
+            <div className="grid grid-cols-2 gap-4">
+              <div className="space-y-2">
+                <Label>Nome do Cliente</Label>
+                <Input
+                  value={newLeadForm.name}
+                  onChange={(e) => setNewLeadForm({ ...newLeadForm, name: e.target.value })}
+                />
+              </div>
+              <div className="space-y-2">
+                <Label>Ramo</Label>
+                <Select
+                  value={newLeadForm.branch}
+                  onValueChange={(val: any) => setNewLeadForm({ ...newLeadForm, branch: val })}
+                >
+                  <SelectTrigger>
+                    <SelectValue />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="Automóveis/Frotas">Automóveis/Frotas</SelectItem>
+                    <SelectItem value="Saúde">Saúde</SelectItem>
+                    <SelectItem value="Odonto">Odonto</SelectItem>
+                    <SelectItem value="Patrimonial">Patrimonial</SelectItem>
+                    <SelectItem value="RC">RC</SelectItem>
+                    <SelectItem value="Vida">Vida</SelectItem>
+                    <SelectItem value="Outros">Outros</SelectItem>
+                  </SelectContent>
+                </Select>
+              </div>
+              <div className="space-y-2">
+                <Label>CNPJ</Label>
+                <Input
+                  value={newLeadForm.cnpj}
+                  onChange={(e) => setNewLeadForm({ ...newLeadForm, cnpj: e.target.value })}
+                />
+              </div>
+              <div className="space-y-2">
+                <Label>Indústria</Label>
+                <Input
+                  value={newLeadForm.industry}
+                  onChange={(e) => setNewLeadForm({ ...newLeadForm, industry: e.target.value })}
+                />
+              </div>
+              <div className="space-y-2">
+                <Label>Responsável</Label>
+                <Input
+                  value={newLeadForm.contactName}
+                  onChange={(e) => setNewLeadForm({ ...newLeadForm, contactName: e.target.value })}
+                />
+              </div>
+              <div className="space-y-2">
+                <Label>Telefone</Label>
+                <Input
+                  value={newLeadForm.contactPhone}
+                  onChange={(e) => setNewLeadForm({ ...newLeadForm, contactPhone: e.target.value })}
+                />
+              </div>
+            </div>
+          </div>
+          <DialogFooter>
+            <Button variant="outline" onClick={() => setIsAddLeadOpen(false)}>
+              Cancelar
+            </Button>
+            <Button onClick={handleAddLead} disabled={!newLeadForm.name}>
+              Salvar Lead
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
       <Tabs
         value={mainCategory}
-        onValueChange={(v) => setMainCategory(v as any)}
+        onValueChange={(v) => setMainCategory(v)}
         className="w-full space-y-6"
       >
-        <TabsList className="bg-muted/50 p-1">
-          {myPermissions.tab_1327 && (
-            <TabsTrigger value="1327" className="px-8">
-              1327
-            </TabsTrigger>
-          )}
-          {myPermissions.tab_corporate && (
-            <TabsTrigger value="Corporate" className="px-8">
-              Corporate
-            </TabsTrigger>
-          )}
-        </TabsList>
+        <div className="flex flex-col md:flex-row gap-2 w-full border-b pb-2">
+          <TabsList className="bg-muted/50 p-1 h-auto flex-wrap justify-start flex-1 overflow-x-auto">
+            {categories.map((cat) => {
+              if (cat.id === '1327' && !myPermissions.tab_1327) return null
+              if (cat.id === 'Corporate' && !myPermissions.tab_corporate) return null
 
-        {myPermissions.tab_1327 && (
-          <TabsContent value="1327" className="space-y-4">
-            <Tabs value={gerenteTab} onValueChange={setGerenteTab} className="w-full">
-              <div className="flex items-center justify-between gap-4 border-b pb-2 mb-4">
-                <TabsList className="bg-transparent h-auto p-0 justify-start w-full overflow-x-auto">
-                  {gerentes1327.map((g) => (
-                    <TabsTrigger
-                      key={g.id}
-                      value={g.id}
-                      className="data-[state=active]:bg-background data-[state=active]:border-b-2 data-[state=active]:border-primary rounded-none px-4 py-2"
+              return (
+                <TabsTrigger
+                  key={cat.id}
+                  value={cat.id}
+                  className="px-6 group relative flex items-center gap-2"
+                >
+                  <span>{cat.name}</span>
+                  <div className="hidden group-hover:flex items-center gap-1 absolute right-1">
+                    <button
+                      type="button"
+                      className="text-muted-foreground hover:text-foreground p-0.5 bg-background/80 rounded"
+                      onClick={(e) => {
+                        e.stopPropagation()
+                        setEditTabCategory(cat)
+                        setEditTabName(cat.name)
+                      }}
                     >
-                      {g.name}
-                    </TabsTrigger>
-                  ))}
-                </TabsList>
+                      <Pencil className="w-3 h-3" />
+                    </button>
+                    {!cat.isSystem && (
+                      <button
+                        type="button"
+                        className="text-muted-foreground hover:text-destructive p-0.5 bg-background/80 rounded"
+                        onClick={(e) => {
+                          e.stopPropagation()
+                          setDeleteTabCategory(cat)
+                        }}
+                      >
+                        <Trash2 className="w-3 h-3" />
+                      </button>
+                    )}
+                  </div>
+                </TabsTrigger>
+              )
+            })}
+          </TabsList>
+          <Button
+            variant="outline"
+            size="sm"
+            onClick={() => setIsAddTabOpen(true)}
+            className="shrink-0 h-10"
+          >
+            <Plus className="w-4 h-4 mr-2" /> Nova Aba
+          </Button>
+        </div>
 
-                <Dialog open={isAddGerenteOpen} onOpenChange={setIsAddGerenteOpen}>
-                  <DialogTrigger asChild>
-                    <Button variant="outline" size="sm" className="shrink-0">
-                      <Plus className="w-4 h-4 mr-2" /> Novo Gerente
-                    </Button>
-                  </DialogTrigger>
-                  <DialogContent>
-                    <DialogHeader>
-                      <DialogTitle>Adicionar Gerente</DialogTitle>
-                    </DialogHeader>
-                    <div className="py-4">
-                      <Label>Nome do Gerente</Label>
-                      <Input
-                        value={newGerenteName}
-                        onChange={(e) => setNewGerenteName(e.target.value)}
-                        placeholder="Ex: Ana Souza"
-                        className="mt-2"
+        {categories.map((cat) => {
+          if (cat.id === '1327' && !myPermissions.tab_1327) return null
+          if (cat.id === 'Corporate' && !myPermissions.tab_corporate) return null
+
+          return (
+            <TabsContent key={cat.id} value={cat.id} className="space-y-4">
+              {cat.id === '1327' ? (
+                <Tabs value={gerenteTab} onValueChange={setGerenteTab} className="w-full">
+                  <div className="flex items-center justify-between gap-4 border-b pb-2 mb-4">
+                    <TabsList className="bg-transparent h-auto p-0 justify-start w-full overflow-x-auto">
+                      {gerentes1327.map((g) => (
+                        <TabsTrigger
+                          key={g.id}
+                          value={g.id}
+                          className="data-[state=active]:bg-background data-[state=active]:border-b-2 data-[state=active]:border-primary rounded-none px-4 py-2"
+                        >
+                          {g.name}
+                        </TabsTrigger>
+                      ))}
+                    </TabsList>
+
+                    <Dialog open={isAddGerenteOpen} onOpenChange={setIsAddGerenteOpen}>
+                      <DialogTrigger asChild>
+                        <Button variant="outline" size="sm" className="shrink-0">
+                          <Plus className="w-4 h-4 mr-2" /> Novo Gerente
+                        </Button>
+                      </DialogTrigger>
+                      <DialogContent>
+                        <DialogHeader>
+                          <DialogTitle>Adicionar Gerente</DialogTitle>
+                        </DialogHeader>
+                        <div className="py-4">
+                          <Label>Nome do Gerente</Label>
+                          <Input
+                            value={newGerenteName}
+                            onChange={(e) => setNewGerenteName(e.target.value)}
+                            placeholder="Ex: Ana Souza"
+                            className="mt-2"
+                          />
+                        </div>
+                        <DialogFooter>
+                          <Button onClick={handleAddGerente}>Salvar</Button>
+                        </DialogFooter>
+                      </DialogContent>
+                    </Dialog>
+                  </div>
+
+                  {gerentes1327.map((g) => (
+                    <TabsContent key={g.id} value={g.id}>
+                      {myPermissions.import_leads && (
+                        <div className="flex justify-end mb-4">
+                          <Button variant="secondary" onClick={() => handleImport(g.id)}>
+                            <Upload className="w-4 h-4 mr-2" /> Importar Planilha
+                          </Button>
+                        </div>
+                      )}
+                      <LeadsTable
+                        leads={categorizedLeads}
+                        onSelect={setSelectedLeadId}
+                        isManager={isManager}
+                        consultants={consultants}
+                        updateLeadConsultant={updateLeadConsultant}
+                        getConsultant={getConsultant}
+                        me={me}
                       />
-                    </div>
-                    <DialogFooter>
-                      <Button onClick={handleAddGerente}>Salvar</Button>
-                    </DialogFooter>
-                  </DialogContent>
-                </Dialog>
-              </div>
-
-              {gerentes1327.map((g) => (
-                <TabsContent key={g.id} value={g.id}>
+                    </TabsContent>
+                  ))}
+                </Tabs>
+              ) : (
+                <>
                   {myPermissions.import_leads && (
                     <div className="flex justify-end mb-4">
-                      <Button variant="secondary" onClick={() => handleImport(g.id)}>
+                      <Button variant="secondary" onClick={() => handleImport('')}>
                         <Upload className="w-4 h-4 mr-2" /> Importar Planilha
                       </Button>
                     </div>
@@ -289,32 +565,11 @@ export default function Leads() {
                     getConsultant={getConsultant}
                     me={me}
                   />
-                </TabsContent>
-              ))}
-            </Tabs>
-          </TabsContent>
-        )}
-
-        {myPermissions.tab_corporate && (
-          <TabsContent value="Corporate" className="space-y-4">
-            {myPermissions.import_leads && (
-              <div className="flex justify-end mb-4">
-                <Button variant="secondary" onClick={() => handleImport('')}>
-                  <Upload className="w-4 h-4 mr-2" /> Importar Planilha
-                </Button>
-              </div>
-            )}
-            <LeadsTable
-              leads={categorizedLeads}
-              onSelect={setSelectedLeadId}
-              isManager={isManager}
-              consultants={consultants}
-              updateLeadConsultant={updateLeadConsultant}
-              getConsultant={getConsultant}
-              me={me}
-            />
-          </TabsContent>
-        )}
+                </>
+              )}
+            </TabsContent>
+          )
+        })}
       </Tabs>
 
       <Sheet open={!!selectedLeadId} onOpenChange={(open) => !open && setSelectedLeadId(null)}>
@@ -738,9 +993,7 @@ Como está sua disponibilidade para um call na próxima terça-feira pela manhã
       <SheetHeader>
         <SheetTitle className="text-2xl flex items-center gap-2">
           {lead.name}
-          <Badge variant="outline">
-            {lead.category} {lead.category === '1327' ? '- Gerente' : ''}
-          </Badge>
+          <Badge variant="outline">{lead.category}</Badge>
         </SheetTitle>
         <SheetDescription>
           Gerencie dados cadastrais, apólices e histórico de interações.

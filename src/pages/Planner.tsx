@@ -1,324 +1,244 @@
 import React, { useState } from 'react'
-import useAppStore, { Reminder, ReminderStatus } from '@/stores/useAppStore'
+import useAppStore, { Reminder } from '@/stores/useAppStore'
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card'
 import { Button } from '@/components/ui/button'
-import { Badge } from '@/components/ui/badge'
 import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
 import { Textarea } from '@/components/ui/textarea'
-import { useToast } from '@/hooks/use-toast'
-import {
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
-} from '@/components/ui/select'
-import {
-  AlertDialog,
-  AlertDialogAction,
-  AlertDialogCancel,
-  AlertDialogContent,
-  AlertDialogDescription,
-  AlertDialogFooter,
-  AlertDialogHeader,
-  AlertDialogTitle,
-} from '@/components/ui/alert-dialog'
+import { Badge } from '@/components/ui/badge'
 import {
   Dialog,
   DialogContent,
   DialogHeader,
   DialogTitle,
   DialogFooter,
+  DialogTrigger,
 } from '@/components/ui/dialog'
-import { Edit, Trash2, CalendarClock, Plus, History, Info } from 'lucide-react'
+import { useToast } from '@/hooks/use-toast'
+import { CheckCircle2, Clock, Plus, Trash2, CalendarDays } from 'lucide-react'
 
 export default function Planner() {
-  const { reminders, addReminder, editReminder, deleteReminder, currentUser } = useAppStore()
+  const {
+    reminders,
+    addReminder,
+    updateReminderStatus,
+    addReminderObservation,
+    deleteReminder,
+    currentUser,
+  } = useAppStore()
   const { toast } = useToast()
 
   const myReminders = reminders.filter((r) => r.userId === currentUser)
 
-  const [deleteId, setDeleteId] = useState<string | null>(null)
-  const [editData, setEditData] = useState<Reminder | null>(null)
-  const [isNewOpen, setIsNewOpen] = useState(false)
-
-  const [form, setForm] = useState({
+  const [isAddOpen, setIsAddOpen] = useState(false)
+  const [newReminder, setNewReminder] = useState({
     description: '',
     dateTime: '',
     observations: '',
-    status: 'Pendente' as ReminderStatus,
   })
 
-  const handleEditClick = (rem: Reminder) => {
-    setEditData(rem)
-    setForm({
-      description: rem.description,
-      dateTime: rem.dateTime ? rem.dateTime.substring(0, 16) : '',
-      observations: rem.observations,
-      status: rem.status,
-    })
-  }
+  const [selectedReminder, setSelectedReminder] = useState<Reminder | null>(null)
+  const [newNote, setNewNote] = useState('')
 
-  const handleSaveEdit = () => {
-    if (editData) {
-      editReminder(editData.id, {
-        description: form.description,
-        dateTime: form.dateTime ? new Date(form.dateTime).toISOString() : new Date().toISOString(),
-        observations: form.observations,
-        status: form.status,
-      })
-      setEditData(null)
-      toast({
-        title: 'Lembrete atualizado',
-        description: 'As alterações foram salvas com sucesso.',
-      })
-    }
-  }
-
-  const handleCreate = () => {
+  const handleAdd = () => {
+    if (!newReminder.description || !newReminder.dateTime) return
     addReminder({
-      description: form.description,
-      dateTime: form.dateTime ? new Date(form.dateTime).toISOString() : new Date().toISOString(),
-      observations: form.observations,
+      description: newReminder.description,
+      dateTime: new Date(newReminder.dateTime).toISOString(),
+      observations: newReminder.observations,
       status: 'Pendente',
     })
-    setIsNewOpen(false)
-    setForm({ description: '', dateTime: '', observations: '', status: 'Pendente' })
-    toast({ title: 'Lembrete criado', description: 'Novo lembrete adicionado à sua agenda.' })
+    setIsAddOpen(false)
+    setNewReminder({ description: '', dateTime: '', observations: '' })
+    toast({ title: 'Lembrete criado', description: 'Sua tarefa foi agendada.' })
   }
 
-  const handleDelete = () => {
-    if (deleteId) {
-      deleteReminder(deleteId)
-      setDeleteId(null)
-      toast({ title: 'Lembrete excluído', description: 'O lembrete foi removido permanentemente.' })
-    }
+  const handleAddNote = () => {
+    if (!selectedReminder || !newNote) return
+    addReminderObservation(selectedReminder.id, newNote)
+    setNewNote('')
+    toast({ title: 'Observação adicionada', description: 'Histórico atualizado.' })
   }
+
+  const now = new Date().getTime()
 
   return (
     <div className="space-y-6">
-      <div className="flex items-center justify-between">
+      <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
         <div>
           <h1 className="text-3xl font-bold tracking-tight">Meus Lembretes</h1>
-          <p className="text-muted-foreground mt-1">
-            Gerencie suas atividades, tarefas e follow-ups agendados.
-          </p>
+          <p className="text-muted-foreground mt-1">Gerencie suas tarefas e compromissos.</p>
         </div>
-        <Button
-          onClick={() => {
-            setForm({ description: '', dateTime: '', observations: '', status: 'Pendente' })
-            setIsNewOpen(true)
-          }}
-        >
-          <Plus className="w-4 h-4 mr-2" /> Novo Lembrete
-        </Button>
+        <Dialog open={isAddOpen} onOpenChange={setIsAddOpen}>
+          <DialogTrigger asChild>
+            <Button>
+              <Plus className="w-4 h-4 mr-2" /> Novo Lembrete
+            </Button>
+          </DialogTrigger>
+          <DialogContent>
+            <DialogHeader>
+              <DialogTitle>Agendar Tarefa</DialogTitle>
+            </DialogHeader>
+            <div className="grid gap-4 py-4">
+              <div className="space-y-2">
+                <Label>Descrição</Label>
+                <Input
+                  value={newReminder.description}
+                  onChange={(e) => setNewReminder({ ...newReminder, description: e.target.value })}
+                  placeholder="Ex: Ligar para cliente..."
+                />
+              </div>
+              <div className="space-y-2">
+                <Label>Data e Hora</Label>
+                <Input
+                  type="datetime-local"
+                  value={newReminder.dateTime}
+                  onChange={(e) => setNewReminder({ ...newReminder, dateTime: e.target.value })}
+                />
+              </div>
+              <div className="space-y-2">
+                <Label>Observações Iniciais</Label>
+                <Textarea
+                  value={newReminder.observations}
+                  onChange={(e) => setNewReminder({ ...newReminder, observations: e.target.value })}
+                />
+              </div>
+            </div>
+            <DialogFooter>
+              <Button onClick={handleAdd}>Salvar Lembrete</Button>
+            </DialogFooter>
+          </DialogContent>
+        </Dialog>
       </div>
 
-      <div className="bg-primary/10 text-primary-foreground border-primary/20 p-3 rounded-lg flex items-center gap-2 text-sm">
-        <Info className="w-4 h-4 text-primary" />
-        <span className="text-primary">
-          As exclusões e alterações operam em modo local (estático) e serão redefinidas ao
-          recarregar a página sem backend conectado.
-        </span>
-      </div>
+      <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
+        {myReminders
+          .sort((a, b) => new Date(a.dateTime).getTime() - new Date(b.dateTime).getTime())
+          .map((r) => {
+            const isPending = r.status === 'Pendente'
+            const rTime = new Date(r.dateTime).getTime()
+            const isNear = isPending && rTime - now > 0 && rTime - now <= 24 * 60 * 60 * 1000
+            const isLate = isPending && rTime < now
 
-      <Card>
-        <CardHeader>
-          <CardTitle>Próximas Atividades</CardTitle>
-          <CardDescription>Acompanhe e edite seus lembretes e status.</CardDescription>
-        </CardHeader>
-        <CardContent>
-          <div className="space-y-4">
-            {myReminders.length === 0 ? (
-              <p className="text-muted-foreground text-sm text-center py-8">
-                Nenhum lembrete encontrado.
-              </p>
-            ) : (
-              myReminders
-                .sort((a, b) => new Date(a.dateTime).getTime() - new Date(b.dateTime).getTime())
-                .map((r) => (
-                  <div
-                    key={r.id}
-                    className="flex items-start justify-between p-4 border rounded-lg bg-card hover:bg-accent/5 transition-colors"
+            return (
+              <Card
+                key={r.id}
+                className={`flex flex-col transition-all ${isNear ? 'border-amber-500 shadow-amber-500/20 shadow-sm' : isLate ? 'border-destructive shadow-destructive/20 shadow-sm' : ''}`}
+              >
+                <CardHeader className="pb-3">
+                  <div className="flex justify-between items-start gap-2">
+                    <CardTitle className="text-lg leading-tight">{r.description}</CardTitle>
+                    <Badge
+                      variant={
+                        isPending
+                          ? isLate
+                            ? 'destructive'
+                            : isNear
+                              ? 'outline'
+                              : 'secondary'
+                          : 'default'
+                      }
+                      className={isNear ? 'border-amber-500 text-amber-600' : ''}
+                    >
+                      {r.status}
+                    </Badge>
+                  </div>
+                  <CardDescription
+                    className={`flex items-center gap-1 mt-1 font-medium ${isLate ? 'text-destructive' : isNear ? 'text-amber-600' : ''}`}
                   >
-                    <div className="flex gap-4 w-full">
-                      <div className="mt-1 bg-primary/10 p-2 rounded-full h-fit shrink-0">
-                        <CalendarClock className="w-5 h-5 text-primary" />
-                      </div>
-                      <div className="flex-1 min-w-0">
-                        <h4 className="font-semibold text-lg">{r.description}</h4>
-                        <p className="text-sm text-muted-foreground mt-1 whitespace-pre-wrap">
-                          {r.observations}
-                        </p>
-                        <div className="flex flex-wrap gap-2 items-center mt-3">
-                          <Badge variant={r.status === 'Concluído' ? 'default' : 'secondary'}>
-                            {r.status}
-                          </Badge>
-                          <span className="text-xs text-muted-foreground bg-muted px-2 py-1 rounded-md">
-                            {new Date(r.dateTime).toLocaleString('pt-BR', {
-                              dateStyle: 'medium',
-                              timeStyle: 'short',
-                            })}
-                          </span>
-                        </div>
+                    <CalendarDays className="w-4 h-4" />{' '}
+                    {new Date(r.dateTime).toLocaleString('pt-BR')}
+                  </CardDescription>
+                </CardHeader>
+                <CardContent className="flex-1 flex flex-col justify-between gap-4">
+                  <p className="text-sm text-muted-foreground whitespace-pre-wrap">
+                    {r.observations}
+                  </p>
 
-                        {r.history && r.history.length > 0 && (
-                          <div className="mt-4 pt-3 border-t space-y-2 w-full">
-                            <p className="text-xs font-semibold flex items-center gap-1 text-muted-foreground uppercase tracking-wider">
-                              <History className="w-3 h-3" /> Histórico de Alterações (Log de
-                              Auditoria)
-                            </p>
-                            <div className="space-y-1">
-                              {r.history.slice(0, 3).map((h) => (
-                                <p
-                                  key={h.id}
-                                  className="text-[11px] text-muted-foreground border-l-2 border-primary/30 pl-2 py-0.5"
-                                >
-                                  {h.note}
-                                </p>
-                              ))}
-                            </div>
-                          </div>
-                        )}
-                      </div>
-                    </div>
-                    <div className="flex gap-2 shrink-0 ml-4">
-                      <Button variant="outline" size="icon" onClick={() => handleEditClick(r)}>
-                        <Edit className="w-4 h-4 text-muted-foreground hover:text-primary" />
-                      </Button>
+                  <Dialog
+                    open={selectedReminder?.id === r.id}
+                    onOpenChange={(open) => !open && setSelectedReminder(null)}
+                  >
+                    <DialogTrigger asChild>
                       <Button
                         variant="outline"
-                        size="icon"
-                        className="hover:bg-destructive/10 hover:border-destructive"
-                        onClick={() => setDeleteId(r.id)}
+                        size="sm"
+                        className="w-full"
+                        onClick={() => setSelectedReminder(r)}
                       >
-                        <Trash2 className="w-4 h-4 text-destructive/70 hover:text-destructive" />
+                        Ver Histórico e Adicionar Nota
                       </Button>
-                    </div>
+                    </DialogTrigger>
+                    <DialogContent>
+                      <DialogHeader>
+                        <DialogTitle>Histórico de: {r.description}</DialogTitle>
+                      </DialogHeader>
+                      <div className="py-4 space-y-4">
+                        <div className="space-y-2">
+                          <Label>Nova Observação (Carimbo de Auditoria)</Label>
+                          <Textarea
+                            placeholder="Adicione uma nota..."
+                            value={newNote}
+                            onChange={(e) => setNewNote(e.target.value)}
+                          />
+                          <Button size="sm" onClick={handleAddNote}>
+                            Adicionar Nota
+                          </Button>
+                        </div>
+                        <div className="space-y-3 max-h-[300px] overflow-auto">
+                          {r.history?.map((h) => (
+                            <div key={h.id} className="text-sm border p-3 rounded-md bg-muted/30">
+                              <p className="whitespace-pre-wrap text-foreground">{h.note}</p>
+                            </div>
+                          ))}
+                          {(!r.history || r.history.length === 0) && (
+                            <p className="text-sm text-muted-foreground text-center">
+                              Nenhum histórico registrado.
+                            </p>
+                          )}
+                        </div>
+                      </div>
+                    </DialogContent>
+                  </Dialog>
+
+                  <div className="flex justify-between items-center pt-2 border-t mt-2">
+                    {isPending ? (
+                      <Button
+                        size="sm"
+                        variant="ghost"
+                        className="text-success hover:text-success hover:bg-success/10"
+                        onClick={() => updateReminderStatus(r.id, 'Concluído')}
+                      >
+                        <CheckCircle2 className="w-4 h-4 mr-2" /> Concluir
+                      </Button>
+                    ) : (
+                      <Button
+                        size="sm"
+                        variant="ghost"
+                        onClick={() => updateReminderStatus(r.id, 'Pendente')}
+                      >
+                        <Clock className="w-4 h-4 mr-2" /> Reabrir
+                      </Button>
+                    )}
+                    <Button
+                      size="sm"
+                      variant="ghost"
+                      className="text-destructive hover:text-destructive hover:bg-destructive/10"
+                      onClick={() => deleteReminder(r.id)}
+                    >
+                      <Trash2 className="w-4 h-4" />
+                    </Button>
                   </div>
-                ))
-            )}
-          </div>
-        </CardContent>
-      </Card>
-
-      {/* Edit Dialog */}
-      <Dialog open={!!editData} onOpenChange={(open) => !open && setEditData(null)}>
-        <DialogContent className="sm:max-w-[450px]">
-          <DialogHeader>
-            <DialogTitle>Editar Lembrete</DialogTitle>
-          </DialogHeader>
-          <div className="space-y-4 py-4">
-            <div className="space-y-2">
-              <Label>Descrição da Atividade</Label>
-              <Input
-                value={form.description}
-                onChange={(e) => setForm({ ...form, description: e.target.value })}
-              />
-            </div>
-            <div className="space-y-2">
-              <Label>Data e Horário</Label>
-              <Input
-                type="datetime-local"
-                value={form.dateTime}
-                onChange={(e) => setForm({ ...form, dateTime: e.target.value })}
-              />
-            </div>
-            <div className="space-y-2">
-              <Label>Status</Label>
-              <Select
-                value={form.status}
-                onValueChange={(v: ReminderStatus) => setForm({ ...form, status: v })}
-              >
-                <SelectTrigger>
-                  <SelectValue />
-                </SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="Pendente">Pendente</SelectItem>
-                  <SelectItem value="Concluído">Concluído</SelectItem>
-                </SelectContent>
-              </Select>
-            </div>
-            <div className="space-y-2">
-              <Label>Observações</Label>
-              <Textarea
-                rows={4}
-                value={form.observations}
-                onChange={(e) => setForm({ ...form, observations: e.target.value })}
-              />
-            </div>
-          </div>
-          <DialogFooter>
-            <Button variant="outline" onClick={() => setEditData(null)}>
-              Cancelar
-            </Button>
-            <Button onClick={handleSaveEdit}>Salvar Alterações</Button>
-          </DialogFooter>
-        </DialogContent>
-      </Dialog>
-
-      {/* New Dialog */}
-      <Dialog open={isNewOpen} onOpenChange={setIsNewOpen}>
-        <DialogContent className="sm:max-w-[450px]">
-          <DialogHeader>
-            <DialogTitle>Novo Lembrete</DialogTitle>
-          </DialogHeader>
-          <div className="space-y-4 py-4">
-            <div className="space-y-2">
-              <Label>Descrição da Atividade</Label>
-              <Input
-                value={form.description}
-                onChange={(e) => setForm({ ...form, description: e.target.value })}
-                placeholder="Ex: Retorno de ligação para Cliente X"
-              />
-            </div>
-            <div className="space-y-2">
-              <Label>Data e Horário</Label>
-              <Input
-                type="datetime-local"
-                value={form.dateTime}
-                onChange={(e) => setForm({ ...form, dateTime: e.target.value })}
-              />
-            </div>
-            <div className="space-y-2">
-              <Label>Observações</Label>
-              <Textarea
-                rows={4}
-                value={form.observations}
-                onChange={(e) => setForm({ ...form, observations: e.target.value })}
-                placeholder="Notas extras sobre a atividade..."
-              />
-            </div>
-          </div>
-          <DialogFooter>
-            <Button variant="outline" onClick={() => setIsNewOpen(false)}>
-              Cancelar
-            </Button>
-            <Button onClick={handleCreate}>Criar Lembrete</Button>
-          </DialogFooter>
-        </DialogContent>
-      </Dialog>
-
-      <AlertDialog open={!!deleteId} onOpenChange={(open) => !open && setDeleteId(null)}>
-        <AlertDialogContent>
-          <AlertDialogHeader>
-            <AlertDialogTitle>Excluir Lembrete?</AlertDialogTitle>
-            <AlertDialogDescription>
-              Esta ação removerá permanentemente este lembrete e todo seu histórico do sistema.
-            </AlertDialogDescription>
-          </AlertDialogHeader>
-          <AlertDialogFooter>
-            <AlertDialogCancel>Cancelar</AlertDialogCancel>
-            <AlertDialogAction
-              onClick={handleDelete}
-              className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
-            >
-              Excluir
-            </AlertDialogAction>
-          </AlertDialogFooter>
-        </AlertDialogContent>
-      </AlertDialog>
+                </CardContent>
+              </Card>
+            )
+          })}
+        {myReminders.length === 0 && (
+          <p className="text-muted-foreground col-span-full">
+            Nenhum lembrete agendado no momento.
+          </p>
+        )}
+      </div>
     </div>
   )
 }
