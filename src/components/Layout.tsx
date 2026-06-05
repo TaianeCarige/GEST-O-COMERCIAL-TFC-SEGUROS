@@ -1,3 +1,4 @@
+import React, { useState } from 'react'
 import { Outlet, Link, useLocation, Navigate } from 'react-router-dom'
 import useAppStore from '@/stores/useAppStore'
 import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover'
@@ -19,6 +20,16 @@ import {
   DropdownMenuSeparator,
   DropdownMenuTrigger,
 } from '@/components/ui/dropdown-menu'
+import {
+  Dialog,
+  DialogContent,
+  DialogHeader,
+  DialogTitle,
+  DialogDescription,
+  DialogFooter,
+} from '@/components/ui/dialog'
+import { Label } from '@/components/ui/label'
+import { useToast } from '@/hooks/use-toast'
 import {
   LayoutDashboard,
   Users,
@@ -113,13 +124,58 @@ export function AppSidebar() {
 }
 
 export default function Layout() {
-  const { consultants, currentUser, isAuthenticated, logout, reminders } = useAppStore()
+  const { consultants, currentUser, isAuthenticated, logout, reminders, updatePassword } =
+    useAppStore()
+  const { toast } = useToast()
+
+  const [isPasswordDialogOpen, setIsPasswordDialogOpen] = useState(false)
+  const [currentPassword, setCurrentPassword] = useState('')
+  const [newPassword, setNewPassword] = useState('')
+  const [confirmNewPassword, setConfirmNewPassword] = useState('')
 
   if (!isAuthenticated) {
     return <Navigate to="/login" replace />
   }
 
   const me = consultants.find((c) => c.id === currentUser)
+
+  const handleUpdatePassword = () => {
+    if (!me) return
+    if (me.password !== currentPassword) {
+      toast({
+        title: 'Erro',
+        description: 'A senha atual está incorreta.',
+        variant: 'destructive',
+      })
+      return
+    }
+    if (newPassword !== confirmNewPassword) {
+      toast({
+        title: 'Erro',
+        description: 'As novas senhas não coincidem.',
+        variant: 'destructive',
+      })
+      return
+    }
+    if (newPassword.length < 6) {
+      toast({
+        title: 'Erro',
+        description: 'A nova senha deve ter pelo menos 6 caracteres.',
+        variant: 'destructive',
+      })
+      return
+    }
+
+    updatePassword(me.id, newPassword)
+    toast({
+      title: 'Sucesso',
+      description: 'Senha alterada com sucesso.',
+    })
+    setIsPasswordDialogOpen(false)
+    setCurrentPassword('')
+    setNewPassword('')
+    setConfirmNewPassword('')
+  }
 
   const myReminders =
     reminders?.filter((r) => r.userId === currentUser && r.status === 'Pendente') || []
@@ -198,6 +254,14 @@ export default function Layout() {
                     <DropdownMenuLabel>Minha Conta</DropdownMenuLabel>
                     <DropdownMenuSeparator />
                     <DropdownMenuItem
+                      onClick={() => setIsPasswordDialogOpen(true)}
+                      className="cursor-pointer"
+                    >
+                      <ShieldCheck className="mr-2 h-4 w-4" />
+                      <span>Alterar Senha</span>
+                    </DropdownMenuItem>
+                    <DropdownMenuSeparator />
+                    <DropdownMenuItem
                       onClick={logout}
                       className="text-destructive focus:text-destructive focus:bg-destructive/10 cursor-pointer"
                     >
@@ -209,6 +273,48 @@ export default function Layout() {
               </div>
             </div>
           </header>
+
+          <Dialog open={isPasswordDialogOpen} onOpenChange={setIsPasswordDialogOpen}>
+            <DialogContent>
+              <DialogHeader>
+                <DialogTitle>Alterar Senha</DialogTitle>
+                <DialogDescription>Atualize sua senha de acesso ao sistema.</DialogDescription>
+              </DialogHeader>
+              <div className="space-y-4 py-4">
+                <div className="space-y-2">
+                  <Label>Senha Atual</Label>
+                  <Input
+                    type="password"
+                    value={currentPassword}
+                    onChange={(e) => setCurrentPassword(e.target.value)}
+                  />
+                </div>
+                <div className="space-y-2">
+                  <Label>Nova Senha</Label>
+                  <Input
+                    type="password"
+                    value={newPassword}
+                    onChange={(e) => setNewPassword(e.target.value)}
+                  />
+                </div>
+                <div className="space-y-2">
+                  <Label>Confirmar Nova Senha</Label>
+                  <Input
+                    type="password"
+                    value={confirmNewPassword}
+                    onChange={(e) => setConfirmNewPassword(e.target.value)}
+                  />
+                </div>
+              </div>
+              <DialogFooter>
+                <Button variant="outline" onClick={() => setIsPasswordDialogOpen(false)}>
+                  Cancelar
+                </Button>
+                <Button onClick={handleUpdatePassword}>Salvar Alteração</Button>
+              </DialogFooter>
+            </DialogContent>
+          </Dialog>
+
           <main className="flex-1 p-4 md:p-8 overflow-auto animate-fade-in-up">
             <Outlet />
           </main>

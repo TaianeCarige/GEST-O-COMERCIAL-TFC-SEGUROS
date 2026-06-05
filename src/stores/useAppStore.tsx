@@ -362,6 +362,8 @@ interface AppStore {
   importLeads: (gerenteId: string, category: string) => void
   addConsultant: (consultant: Omit<Consultant, 'id'>) => void
   resetPassword: (id: string) => void
+  updatePassword: (id: string, newPassword: string) => void
+  register: (name: string, email: string, password: string) => { success: boolean; error?: string }
   reminders: Reminder[]
   addReminder: (reminder: Omit<Reminder, 'id' | 'userId' | 'history'>) => void
   updateReminderStatus: (id: string, status: ReminderStatus) => void
@@ -718,6 +720,35 @@ export function AppStoreProvider({ children }: { children: ReactNode }) {
     setConsultants((prev) => prev.map((c) => (c.id === id ? { ...c, password: 'senha' } : c)))
   }
 
+  const updatePassword = (id: string, newPassword: string) => {
+    setConsultants((prev) => prev.map((c) => (c.id === id ? { ...c, password: newPassword } : c)))
+  }
+
+  const register = (name: string, email: string, password: string) => {
+    const existing = consultants.find((c) => c.email.toLowerCase() === email.toLowerCase())
+    if (existing) {
+      return { success: false, error: 'E-mail já cadastrado.' }
+    }
+    const newConsultant: Consultant = {
+      id: `c-${Date.now()}`,
+      name,
+      email,
+      password,
+      color: `hsl(var(--chart-${(consultants.length % 5) + 1}))`,
+      role: 'Consultor',
+      callsGoal: 100,
+      callsRealized: 0,
+      visitsGoal: 20,
+      visitsRealized: 0,
+      salesGoal: 50000,
+      salesRealized: 0,
+    }
+    setConsultants((prev) => [...prev, newConsultant])
+    setCurrentUser(newConsultant.id)
+    setIsAuthenticated(true)
+    return { success: true }
+  }
+
   const updateConsultantGoals = (
     id: string,
     goals: { callsGoal: number; visitsGoal: number; salesGoal: number },
@@ -766,6 +797,8 @@ export function AppStoreProvider({ children }: { children: ReactNode }) {
         importLeads,
         addConsultant,
         resetPassword,
+        updatePassword,
+        register,
         updateConsultantGoals,
         reminders,
         addReminder,
