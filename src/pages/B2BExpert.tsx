@@ -1,6 +1,8 @@
 import React, { useState, useEffect } from 'react'
 import { useSearchParams } from 'react-router-dom'
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card'
+import pb from '@/lib/pocketbase/client'
+import { useToast } from '@/hooks/use-toast'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { Badge } from '@/components/ui/badge'
@@ -151,6 +153,7 @@ export default function B2BExpert() {
   const [inputVal, setInputVal] = useState('')
   const [isGenerating, setIsGenerating] = useState(false)
   const [briefing, setBriefing] = useState<BriefingData | null>(null)
+  const { toast } = useToast()
 
   useEffect(() => {
     const sectorParam = searchParams.get('sector')
@@ -162,42 +165,41 @@ export default function B2BExpert() {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [])
 
-  const handleAnalysis = (sectorValue: string) => {
+  const handleAnalysis = async (sectorValue: string) => {
     if (!sectorValue.trim()) return
 
     setIsGenerating(true)
     setBriefing(null)
 
-    // Simulate AI / Engine thinking
-    setTimeout(() => {
-      const valLower = sectorValue.toLowerCase()
-      let key = 'default'
-      if (
-        valLower.includes('indústria') ||
-        valLower.includes('fabri') ||
-        valLower.includes('manufatura')
+    try {
+      const res = await fetch(
+        `${import.meta.env.VITE_POCKETBASE_URL}/backend/v1/ask-tfc-consultant`,
+        {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json', Authorization: pb.authStore.token },
+          body: JSON.stringify({
+            message: `Gere um briefing B2B estratégico para o setor ou empresa: "${sectorValue}". Retorne estritamente um JSON válido (sem marcação de markdown como \`\`\`json) com a seguinte estrutura exata: {"risks": ["risco 1", "risco 2"], "productMix": ["Produto A"], "arguments": ["arg 1", "arg 2"], "objections": [{"question": "obj 1", "answer": "resp 1"}]}. O productMix deve conter apenas valores desta lista (escolha de 1 a 4 focados no setor): "Automóveis e Frotas", "Saúde", "Vida", "Odontológico", "Responsabilidade Civil", "Patrimonial". Crie de 3 a 5 risks, 3 arguments e 2 objections inteligentes e consultivas.`,
+          }),
+        },
       )
-        key = 'industria'
-      else if (
-        valLower.includes('serviço') ||
-        valLower.includes('tec') ||
-        valLower.includes('consultoria') ||
-        valLower.includes('soft') ||
-        valLower.includes('saúde') ||
-        valLower.includes('clínica')
-      )
-        key = 'servicos'
-      else if (
-        valLower.includes('comércio') ||
-        valLower.includes('varejo') ||
-        valLower.includes('loja')
-      )
-        key = 'comercio'
+      const data = await res.json()
+      if (!res.ok) throw new Error(data.error)
 
-      const result = { ...SECTOR_DATA[key], sector: sectorValue.trim() }
-      setBriefing(result)
+      const text = data.content
+        .replace(/```json/g, '')
+        .replace(/```/g, '')
+        .trim()
+      const parsed = JSON.parse(text)
+      setBriefing({ ...parsed, sector: sectorValue })
+    } catch (err: any) {
+      toast({
+        title: 'Erro',
+        description: 'Não foi possível gerar a análise. Tente novamente.',
+        variant: 'destructive',
+      })
+    } finally {
       setIsGenerating(false)
-    }, 1200)
+    }
   }
 
   const handleGenerate = (e: React.FormEvent) => {

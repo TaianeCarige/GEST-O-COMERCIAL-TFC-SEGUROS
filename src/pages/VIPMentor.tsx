@@ -1,161 +1,220 @@
-import React, { useState, useEffect } from 'react'
+import React, { useState, useEffect, useRef } from 'react'
 import { useSearchParams } from 'react-router-dom'
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
-import { Sparkles, Diamond, ShieldAlert, BadgeDollarSign, Target } from 'lucide-react'
+import { ScrollArea } from '@/components/ui/scroll-area'
+import { Sparkles, Send, User, Bot, Loader2 } from 'lucide-react'
+import { streamAgentChat, displayableMessages, DisplayMessage } from '@/lib/skipAi'
+import pb from '@/lib/pocketbase/client'
+import { useToast } from '@/hooks/use-toast'
 
 export default function VIPMentor() {
   const [searchParams] = useSearchParams()
-  const [targetName, setTargetName] = useState('')
-  const [isAnalyzing, setIsAnalyzing] = useState(false)
-  const [mentorData, setMentorData] = useState<{
-    mindset: string
-    dos: string[]
-    donts: string[]
-    insight: string
-  } | null>(null)
+  const [messages, setMessages] = useState<DisplayMessage[]>([])
+  const [input, setInput] = useState('')
+  const [conversationId, setConversationId] = useState<string | null>(null)
+  const [isStreaming, setIsStreaming] = useState(false)
+  const abortControllerRef = useRef<AbortController | null>(null)
+  const { toast } = useToast()
+  const scrollRef = useRef<HTMLDivElement>(null)
 
   useEffect(() => {
-    const lead = searchParams.get('lead')
-    if (lead) {
-      setTargetName(lead)
-      handleAnalyze(lead)
+    const loadHistory = async () => {
+      try {
+        const res = await fetch(
+          `${import.meta.env.VITE_POCKETBASE_URL}/backend/v1/tfc-consultant/chats`,
+          {
+            headers: { Authorization: pb.authStore.token },
+          },
+        )
+        const data = await res.json()
+        if (data && data.items && data.items.length > 0) {
+          const latestConv = data.items[0]
+          setConversationId(latestConv.id)
+
+          const msgsRes = await fetch(
+            `${import.meta.env.VITE_POCKETBASE_URL}/backend/v1/tfc-consultant/chats/${latestConv.id}/messages`,
+            {
+              headers: { Authorization: pb.authStore.token },
+            },
+          )
+          const msgsData = await msgsRes.json()
+          if (msgsData.messages) {
+            setMessages(displayableMessages(msgsData.messages))
+          }
+        } else {
+          const lead = searchParams.get('lead')
+          if (lead) {
+            handleSend(`Como abordar estrategicamente o lead Alta Renda/VIP: ${lead}?`)
+          }
+        }
+      } catch (e) {
+        console.error(e)
+      }
     }
-  }, [searchParams])
+    loadHistory()
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [])
 
-  const handleAnalyze = (target: string) => {
-    if (!target.trim()) return
-    setIsAnalyzing(true)
-    setMentorData(null)
+  useEffect(() => {
+    if (scrollRef.current) {
+      scrollRef.current.scrollIntoView({ behavior: 'smooth' })
+    }
+  }, [messages])
 
-    setTimeout(() => {
-      setMentorData({
-        mindset:
-          'O cliente Alta Renda/Corporativo não compra preço, compra Autoridade e Solução de Risco. O tempo dele é o ativo mais valioso.',
-        dos: [
-          'Vista-se (física e verbalmente) como um executivo de igual para igual.',
-          "Fale em 'Exposição ao Risco', 'Blindagem Patrimonial' e 'Continuidade do Negócio'.",
-          'Apresente cases de sucesso anônimos da própria corretora TFC.',
-          "Crie escassez: 'Avaliamos poucas contas com esse perfil mensalmente para garantir exclusividade.'",
-        ],
-        donts: [
-          "Não use a palavra 'Cotação' ou 'Segurinho'.",
-          'Não seja insistente ou ansioso (necessity vibes espantam Alta Renda).',
-          'Não faça perguntas de triagem básicas que você já poderia ter pesquisado (Google/LinkedIn).',
-        ],
-        insight: `Para o contato com ${target}, foque em agendar um 'Assessment Executivo de 15 min'. O objetivo inicial NÃO é fechar negócio, mas conquistar o status de 'Conselheiro de Riscos'.`,
+  const handleSend = async (text: string) => {
+    if (!text.trim()) return
+
+    const tempId = Math.random().toString()
+    const newUserMsg: DisplayMessage = {
+      id: tempId,
+      role: 'user',
+      content: text,
+      created: new Date().toISOString(),
+    }
+    setMessages((prev) => [...prev, newUserMsg])
+    setInput('')
+    setIsStreaming(true)
+
+    abortControllerRef.current = new AbortController()
+
+    try {
+      const res = await fetch(
+        `${import.meta.env.VITE_POCKETBASE_URL}/backend/v1/ask-tfc-consultant-stream`,
+        {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json', Authorization: pb.authStore.token },
+          body: JSON.stringify({ message: text, conversation_id: conversationId }),
+          signal: abortControllerRef.current.signal,
+        },
+      )
+
+      const result = await streamAgentChat(res, {
+        onChunk: (delta, full) => {
+          setMessages((prev) => {
+            const last = prev[prev.length - 1]
+            if (last.role === 'assistant' && last.id === 'streaming') {
+              return [...prev.slice(0, -1), { ...last, content: full }]
+            } else {
+              return [
+                ...prev,
+                {
+                  id: 'streaming',
+                  role: 'assistant',
+                  content: full,
+                  created: new Date().toISOString(),
+                },
+              ]
+            }
+          })
+        },
+        signal: abortControllerRef.current.signal,
       })
-      setIsAnalyzing(false)
-    }, 1000)
+
+      setConversationId(res.headers.get('X-Conversation-Id') ?? result.conversation_id)
+      setMessages((prev) => {
+        const last = prev[prev.length - 1]
+        if (last.id === 'streaming') {
+          return [
+            ...prev.slice(0, -1),
+            {
+              id: result.message_id,
+              role: 'assistant',
+              content: result.content,
+              created: new Date().toISOString(),
+            },
+          ]
+        }
+        return prev
+      })
+    } catch (err: any) {
+      if (err.name !== 'AbortError') {
+        toast({ title: 'Erro', description: err.message, variant: 'destructive' })
+      }
+    } finally {
+      setIsStreaming(false)
+    }
   }
 
-  const handleSubmit = (e: React.FormEvent) => {
+  const onSubmit = (e: React.FormEvent) => {
     e.preventDefault()
-    handleAnalyze(targetName)
+    handleSend(input)
   }
 
   return (
-    <div className="space-y-6 h-full flex flex-col pb-10">
+    <div className="space-y-6 h-[calc(100vh-100px)] flex flex-col pb-6">
       <div>
         <h1 className="text-3xl font-bold tracking-tight flex items-center gap-2">
           <Sparkles className="h-8 w-8 text-amber-500" />
-          Expert Mentor Alta Renda (VIP)
+          Mentor IA (Consultor Inteligente TFC)
         </h1>
         <p className="text-muted-foreground mt-1">
-          Refinamento de postura, abordagem e mindset para reuniões com Decisores C-Level.
+          Assistente estratégico para abordagens, estruturação de propostas e fechamento VIP.
         </p>
       </div>
 
-      <Card className="border-amber-500/20 bg-amber-500/5 shadow-none">
-        <CardContent className="pt-6">
-          <form onSubmit={handleSubmit} className="flex flex-col sm:flex-row gap-4 items-end">
-            <div className="space-y-2 flex-1 w-full">
-              <label htmlFor="target-input" className="text-sm font-medium leading-none">
-                Nome do Lead ou Cargo do Decisor (Ex: CEO Grupo Alpha)
-              </label>
-              <Input
-                id="target-input"
-                placeholder="CEO, Diretor Financeiro, Presidente..."
-                value={targetName}
-                onChange={(e) => setTargetName(e.target.value)}
-                className="bg-background border-amber-500/30 focus-visible:ring-amber-500"
-              />
-            </div>
+      <Card className="flex-1 flex flex-col overflow-hidden border-amber-500/20 shadow-lg">
+        <ScrollArea className="flex-1 p-4">
+          <div className="space-y-6 pb-4">
+            {messages.length === 0 && !isStreaming && (
+              <div className="flex flex-col items-center justify-center h-full text-center text-muted-foreground mt-20 space-y-4">
+                <Bot className="h-12 w-12 text-amber-500/50" />
+                <p>
+                  Olá! Sou o Consultor Inteligente da TFC.
+                  <br />
+                  Como posso ajudar a estruturar sua próxima grande venda?
+                </p>
+              </div>
+            )}
+            {messages.map((msg, i) => (
+              <div
+                key={msg.id || i}
+                className={`flex gap-3 ${msg.role === 'user' ? 'justify-end' : 'justify-start'}`}
+              >
+                {msg.role === 'assistant' && (
+                  <div className="h-8 w-8 shrink-0 rounded-full bg-amber-500/10 flex items-center justify-center border border-amber-500/20">
+                    <Bot className="h-5 w-5 text-amber-600" />
+                  </div>
+                )}
+                <div
+                  className={`px-4 py-2.5 rounded-lg max-w-[85%] text-sm whitespace-pre-wrap ${msg.role === 'user' ? 'bg-primary text-primary-foreground' : 'bg-muted border shadow-sm'}`}
+                >
+                  {msg.content}
+                </div>
+                {msg.role === 'user' && (
+                  <div className="h-8 w-8 shrink-0 rounded-full bg-primary flex items-center justify-center text-primary-foreground">
+                    <User className="h-5 w-5" />
+                  </div>
+                )}
+              </div>
+            ))}
+            <div ref={scrollRef} />
+          </div>
+        </ScrollArea>
+        <div className="p-4 bg-background border-t">
+          <form onSubmit={onSubmit} className="flex gap-2">
+            <Input
+              value={input}
+              onChange={(e) => setInput(e.target.value)}
+              placeholder="Digite sua dúvida ou contexto do lead..."
+              disabled={isStreaming}
+              className="flex-1"
+            />
             <Button
               type="submit"
-              disabled={isAnalyzing || !targetName.trim()}
-              className="w-full sm:w-auto bg-amber-600 hover:bg-amber-700 text-white"
+              disabled={!input.trim() || isStreaming}
+              className="bg-amber-600 hover:bg-amber-700 text-white"
             >
-              {isAnalyzing ? 'Refinando Mindset...' : 'Solicitar Mentoria VIP'}
+              {isStreaming ? (
+                <Loader2 className="h-4 w-4 animate-spin" />
+              ) : (
+                <Send className="h-4 w-4" />
+              )}
             </Button>
           </form>
-        </CardContent>
-      </Card>
-
-      {mentorData && (
-        <div className="grid grid-cols-1 md:grid-cols-2 gap-6 animate-fade-in-up">
-          <Card className="md:col-span-2 bg-slate-900 text-white border-none shadow-xl">
-            <CardHeader>
-              <CardTitle className="flex items-center gap-2 text-amber-400">
-                <Diamond className="h-5 w-5" />
-                O Mindset do Executivo Alta Renda
-              </CardTitle>
-            </CardHeader>
-            <CardContent>
-              <p className="text-lg font-medium leading-relaxed italic border-l-4 border-amber-500 pl-4">
-                "{mentorData.mindset}"
-              </p>
-              <div className="mt-6 p-4 bg-white/10 rounded-lg flex gap-3 items-start">
-                <Target className="h-6 w-6 text-amber-400 shrink-0" />
-                <p className="text-sm font-medium">{mentorData.insight}</p>
-              </div>
-            </CardContent>
-          </Card>
-
-          <Card className="border-success/30 border-2">
-            <CardHeader className="bg-success/5 pb-4">
-              <CardTitle className="text-success flex items-center gap-2">
-                <BadgeDollarSign className="h-5 w-5" />
-                DOs (O que Fazer)
-              </CardTitle>
-            </CardHeader>
-            <CardContent className="pt-6">
-              <ul className="space-y-4">
-                {mentorData.dos.map((item, idx) => (
-                  <li key={idx} className="flex items-start gap-2 text-sm font-medium">
-                    <div className="h-5 w-5 rounded-full bg-success/20 text-success flex items-center justify-center shrink-0 mt-0.5 text-xs">
-                      ✓
-                    </div>
-                    <span>{item}</span>
-                  </li>
-                ))}
-              </ul>
-            </CardContent>
-          </Card>
-
-          <Card className="border-destructive/30 border-2">
-            <CardHeader className="bg-destructive/5 pb-4">
-              <CardTitle className="text-destructive flex items-center gap-2">
-                <ShieldAlert className="h-5 w-5" />
-                DON'Ts (O que Evitar)
-              </CardTitle>
-            </CardHeader>
-            <CardContent className="pt-6">
-              <ul className="space-y-4">
-                {mentorData.donts.map((item, idx) => (
-                  <li key={idx} className="flex items-start gap-2 text-sm font-medium">
-                    <div className="h-5 w-5 rounded-full bg-destructive/20 text-destructive flex items-center justify-center shrink-0 mt-0.5 text-xs">
-                      ✗
-                    </div>
-                    <span>{item}</span>
-                  </li>
-                ))}
-              </ul>
-            </CardContent>
-          </Card>
         </div>
-      )}
+      </Card>
     </div>
   )
 }

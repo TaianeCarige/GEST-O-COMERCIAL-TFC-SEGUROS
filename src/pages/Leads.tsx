@@ -10,6 +10,7 @@ import { getSegmentos, deleteSegmento } from '@/services/segmentos'
 import { getGerentes } from '@/services/gerentes'
 import { useRealtime } from '@/hooks/use-realtime'
 import { useToast } from '@/hooks/use-toast'
+import { useAuth } from '@/hooks/use-auth'
 
 export default function Leads() {
   const [segments, setSegments] = useState<any[]>([])
@@ -22,6 +23,8 @@ export default function Leads() {
   const [editingSegment, setEditingSegment] = useState<any>(null)
 
   const { toast } = useToast()
+  const { user } = useAuth()
+  const isManager = user?.role === 'manager'
 
   const loadData = async () => {
     try {
@@ -94,10 +97,12 @@ export default function Leads() {
         </Tabs>
 
         <div className="flex items-center gap-1 ml-4 shrink-0">
-          <Button variant="outline" size="sm" onClick={handleAddSegment}>
-            <Plus className="w-4 h-4 mr-1" /> Tab
-          </Button>
-          {activeSegmentId && (
+          {isManager && (
+            <Button variant="outline" size="sm" onClick={handleAddSegment}>
+              <Plus className="w-4 h-4 mr-1" /> Tab
+            </Button>
+          )}
+          {isManager && activeSegmentId && (
             <>
               <Button variant="ghost" size="icon" onClick={handleEditSegment}>
                 <Edit className="w-4 h-4 text-muted-foreground" />

@@ -20,6 +20,7 @@ import Agenda from './pages/Agenda'
 import Planner from './pages/Planner'
 import B2BExpert from './pages/B2BExpert'
 import ScriptGenerator from './pages/ScriptGenerator'
+import Prospecting from './pages/Prospecting'
 import Reports from './pages/Reports'
 import NotFound from './pages/NotFound'
 import AvailableLeads from './pages/AvailableLeads'
@@ -54,7 +55,7 @@ const App = () => (
               <Route path="/planner" element={<Planner />} />
               <Route path="/b2b-expert" element={<B2BExpert />} />
               <Route path="/vip-mentor" element={<VIPMentor />} />
-              <Route path="/prospecting" element={<ScriptGenerator />} />
+              <Route path="/prospecting" element={<Prospecting />} />
               <Route path="/reports" element={<Reports />} />
               <Route path="/users" element={<Users />} />
             </Route>

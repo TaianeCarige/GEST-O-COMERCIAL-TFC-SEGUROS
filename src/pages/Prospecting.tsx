@@ -14,39 +14,10 @@ import { FileText, Copy, Sparkles } from 'lucide-react'
 import { useToast } from '@/hooks/use-toast'
 import useAppStore from '@/stores/useAppStore'
 import { Navigate } from 'react-router-dom'
+import pb from '@/lib/pocketbase/client'
+import { Loader2 } from 'lucide-react'
 
-const SCRIPT_TEMPLATES = {
-  Saúde: {
-    hook: 'Somos especialistas em blindagem patrimonial e eficiência de custos com benefícios corporativos.',
-    pain: 'Sabemos que a inflação médica e a dificuldade na retenção de talentos estão impactando as margens das operações e expondo o caixa.',
-    value:
-      'Desenhamos uma arquitetura de Saúde focada na redução de sinistralidade e otimização de custos, garantindo a proteção financeira do seu balanço.',
-  },
-  Odonto: {
-    hook: 'Atuamos na valorização do capital humano com alto impacto perceptível e eficiência de custos.',
-    pain: 'Muitas empresas perdem a chance de fidelizar a equipe e acabam assumindo passivos trabalhistas ocultos.',
-    value:
-      'A TFC estrutura planos odontológicos eficientes que não oneram a folha e atuam como uma camada extra de proteção ao capital humano.',
-  },
-  Patrimonial: {
-    hook: 'Nossa consultoria é focada na continuidade de negócios, blindagem patrimonial e proteção do balanço financeiro.',
-    pain: 'Uma interrupção operacional imprevista pode quebrar o caixa de operações que não possuem compliance adequado de apólices.',
-    value:
-      'Realizamos uma varredura de exposição de riscos e desenhamos uma blindagem jurídica e patrimonial, garantindo a solidez e eficiência de custos.',
-  },
-  'Auto/Frota': {
-    hook: 'Somos especialistas em otimização de custo logístico e blindagem patrimonial de ativos corporativos.',
-    pain: 'Veículos parados ou sinistros mal geridos representam aumento drástico de custos operacionais e passivos.',
-    value:
-      'A TFC implementa proteção de ativos e gestão de frotas, reduzindo significativamente seu custo operacional e exposição de capital.',
-  },
-  RC: {
-    hook: 'Atuamos com proteção e blindagem patrimonial corporativa para sócios, diretores e operações complexas.',
-    pain: 'Processos judiciais e falhas em compliance estão em escalada, ameaçando diretamente o patrimônio da empresa e de seus executivos.',
-    value:
-      'Estruturamos a blindagem jurídica através do seguro de Responsabilidade Civil, permitindo operação sem exposição patrimonial e com eficiência de custos.',
-  },
-}
+const PRODUCTS = ['Saúde', 'Odonto', 'Patrimonial', 'Auto/Frota', 'Responsabilidade Civil', 'Vida']
 
 export default function Prospecting() {
   const { consultants, currentUser, permissions } = useAppStore()
@@ -58,26 +29,31 @@ export default function Prospecting() {
   const [company, setCompany] = useState('')
   const [contact, setContact] = useState('')
   const [generatedScript, setGeneratedScript] = useState('')
+  const [isGenerating, setIsGenerating] = useState(false)
 
-  const handleGenerate = () => {
+  const handleGenerate = async () => {
     if (!product || !company || !contact) return
+    setIsGenerating(true)
 
-    const template = SCRIPT_TEMPLATES[product as keyof typeof SCRIPT_TEMPLATES]
-    if (!template) return
-
-    const script = `Olá, ${contact}. Aqui é ${me?.name}, da TFC Seguros Corporativos.
-
-${template.hook}
-
-Avaliando o cenário atual da ${company}, identificamos um desafio comum no seu setor: ${template.pain}
-
-${template.value}
-
-O objetivo do nosso contato é agendar um Assessment Executivo de 15 minutos para mapear seu cenário e apresentar um modelo de mitigação de riscos, blindando seu patrimônio e garantindo eficiência de custos.
-
-Como está sua disponibilidade para um call na próxima terça-feira pela manhã?`
-
-    setGeneratedScript(script)
+    try {
+      const res = await fetch(
+        `${import.meta.env.VITE_POCKETBASE_URL}/backend/v1/ask-tfc-consultant`,
+        {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json', Authorization: pb.authStore.token },
+          body: JSON.stringify({
+            message: `Crie uma mensagem de prospecção (cold call ou LinkedIn) VIP focada no produto ${product}. Decisor: ${contact}, Empresa: ${company}. Meu nome é ${me?.name || 'Consultor'}. Aborde os desafios comuns deste ramo de forma extremamente consultiva. Use técnicas de copywriting executivo, gerando curiosidade para uma conversa breve de apresentação.`,
+          }),
+        },
+      )
+      const data = await res.json()
+      if (!res.ok) throw new Error(data.error)
+      setGeneratedScript(data.content)
+    } catch (err: any) {
+      toast({ title: 'Erro', description: err.message, variant: 'destructive' })
+    } finally {
+      setIsGenerating(false)
+    }
   }
 
   const handleCopy = () => {
@@ -137,7 +113,7 @@ Como está sua disponibilidade para um call na próxima terça-feira pela manhã
                   <SelectValue placeholder="Selecione o Ramo" />
                 </SelectTrigger>
                 <SelectContent>
-                  {Object.keys(SCRIPT_TEMPLATES).map((key) => (
+                  {PRODUCTS.map((key) => (
                     <SelectItem key={key} value={key}>
                       {key}
                     </SelectItem>
@@ -148,9 +124,14 @@ Como está sua disponibilidade para um call na próxima terça-feira pela manhã
             <Button
               className="w-full mt-4"
               onClick={handleGenerate}
-              disabled={!product || !company || !contact}
+              disabled={!product || !company || !contact || isGenerating}
             >
-              <Sparkles className="w-4 h-4 mr-2" /> Gerar Script VIP
+              {isGenerating ? (
+                <Loader2 className="w-4 h-4 mr-2 animate-spin" />
+              ) : (
+                <Sparkles className="w-4 h-4 mr-2" />
+              )}
+              {isGenerating ? 'Gerando...' : 'Gerar Abordagem VIP'}
             </Button>
           </CardContent>
         </Card>
