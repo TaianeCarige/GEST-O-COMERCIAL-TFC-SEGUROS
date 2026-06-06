@@ -1,6 +1,6 @@
 import React, { useState } from 'react'
 import { useNavigate } from 'react-router-dom'
-import useAppStore from '@/stores/useAppStore'
+import { useAuth } from '@/hooks/use-auth'
 import {
   Card,
   CardContent,
@@ -19,7 +19,7 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs'
 export default function Login() {
   const navigate = useNavigate()
   const { toast } = useToast()
-  const { login, register } = useAppStore()
+  const { signIn, signUp } = useAuth()
 
   // Login State
   const [loginEmail, setLoginEmail] = useState('')
@@ -31,21 +31,21 @@ export default function Login() {
   const [regPassword, setRegPassword] = useState('')
   const [regConfirmPassword, setRegConfirmPassword] = useState('')
 
-  const handleLogin = (e: React.FormEvent) => {
+  const handleLogin = async (e: React.FormEvent) => {
     e.preventDefault()
-    const success = login(loginEmail, loginPassword)
-    if (success) {
+    const { error } = await signIn(loginEmail, loginPassword)
+    if (!error) {
       navigate('/')
     } else {
       toast({
         title: 'Erro de autenticação',
-        description: 'E-mail ou senha incorretos.',
+        description: error.message || 'E-mail ou senha incorretos.',
         variant: 'destructive',
       })
     }
   }
 
-  const handleRegister = (e: React.FormEvent) => {
+  const handleRegister = async (e: React.FormEvent) => {
     e.preventDefault()
     if (regPassword !== regConfirmPassword) {
       toast({
@@ -64,8 +64,8 @@ export default function Login() {
       return
     }
 
-    const result = register(regName, regEmail, regPassword)
-    if (result.success) {
+    const { error } = await signUp(regEmail, regPassword, regName)
+    if (!error) {
       toast({
         title: 'Cadastro realizado',
         description: 'Bem-vindo ao CRM TFC!',
@@ -74,7 +74,7 @@ export default function Login() {
     } else {
       toast({
         title: 'Erro no cadastro',
-        description: result.error,
+        description: error.message || 'Ocorreu um erro no cadastro.',
         variant: 'destructive',
       })
     }

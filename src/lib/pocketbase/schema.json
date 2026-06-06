@@ -1,0 +1,142 @@
+{
+  "generatedAt": "2026-06-06T00:13:40.072Z",
+  "collections": [
+    {
+      "name": "users",
+      "type": "auth",
+      "apiRules": {
+        "list": "id = @request.auth.id || @request.auth.role = 'manager'",
+        "view": "id = @request.auth.id || @request.auth.role = 'manager'",
+        "create": "",
+        "update": "id = @request.auth.id || @request.auth.role = 'manager'",
+        "delete": "id = @request.auth.id || @request.auth.role = 'manager'"
+      },
+      "fields": [
+        {
+          "name": "name",
+          "type": "text",
+          "required": false,
+          "system": false
+        },
+        {
+          "name": "avatar",
+          "type": "file",
+          "required": false,
+          "system": false
+        },
+        {
+          "name": "created",
+          "type": "autodate",
+          "required": false,
+          "system": false,
+          "autodateTriggers": ["onCreate"]
+        },
+        {
+          "name": "updated",
+          "type": "autodate",
+          "required": false,
+          "system": false,
+          "autodateTriggers": ["onCreate", "onUpdate"]
+        },
+        {
+          "name": "role",
+          "type": "select",
+          "required": false,
+          "system": false,
+          "selectValues": ["manager", "consultant"]
+        },
+        {
+          "name": "active",
+          "type": "bool",
+          "required": false,
+          "system": false
+        },
+        {
+          "name": "salesGoal",
+          "type": "number",
+          "required": false,
+          "system": false
+        }
+      ],
+      "indexes": [
+        "CREATE UNIQUE INDEX `idx_tokenKey__pb_users_auth_` ON `users` (`tokenKey`)",
+        "CREATE UNIQUE INDEX `idx_email__pb_users_auth_` ON `users` (`email`) WHERE `email` != ''"
+      ]
+    },
+    {
+      "name": "mapeamentos",
+      "type": "base",
+      "apiRules": {
+        "list": "@request.auth.id != '' && (manager_id = @request.auth.id || @request.auth.role = 'manager')",
+        "view": "@request.auth.id != '' && (manager_id = @request.auth.id || @request.auth.role = 'manager')",
+        "create": "@request.auth.id != ''",
+        "update": "@request.auth.id != '' && (manager_id = @request.auth.id || @request.auth.role = 'manager')",
+        "delete": "@request.auth.role = 'manager'"
+      },
+      "fields": [
+        {
+          "name": "name",
+          "type": "text",
+          "required": true,
+          "system": false
+        },
+        {
+          "name": "email",
+          "type": "email",
+          "required": false,
+          "system": false
+        },
+        {
+          "name": "phone",
+          "type": "text",
+          "required": false,
+          "system": false
+        },
+        {
+          "name": "type",
+          "type": "select",
+          "required": false,
+          "system": false,
+          "selectValues": ["Lead", "Cliente"]
+        },
+        {
+          "name": "insurance_expiry",
+          "type": "date",
+          "required": false,
+          "system": false
+        },
+        {
+          "name": "manager_id",
+          "type": "relation",
+          "required": true,
+          "system": false,
+          "collectionRef": "users"
+        },
+        {
+          "name": "status",
+          "type": "text",
+          "required": false,
+          "system": false
+        },
+        {
+          "name": "created",
+          "type": "autodate",
+          "required": false,
+          "system": false,
+          "autodateTriggers": ["onCreate"]
+        },
+        {
+          "name": "updated",
+          "type": "autodate",
+          "required": false,
+          "system": false,
+          "autodateTriggers": ["onCreate", "onUpdate"]
+        }
+      ],
+      "indexes": [
+        "CREATE INDEX idx_mapeamentos_insurance_expiry ON mapeamentos (insurance_expiry)",
+        "CREATE INDEX idx_mapeamentos_manager_id ON mapeamentos (manager_id)"
+      ]
+    }
+  ]
+}

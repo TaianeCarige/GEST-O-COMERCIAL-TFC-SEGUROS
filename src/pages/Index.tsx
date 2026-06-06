@@ -1,249 +1,71 @@
-import React from 'react'
-import useAppStore from '@/stores/useAppStore'
-import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card'
-import { Badge } from '@/components/ui/badge'
-import { Button } from '@/components/ui/button'
-import { DollarSign, AlertTriangle, Clock, ChevronRight } from 'lucide-react'
-import { Link } from 'react-router-dom'
-import { Progress } from '@/components/ui/progress'
+import React, { useState, useEffect } from 'react'
+import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
+import { getMapeamentos } from '@/services/mapeamentos'
+import { useRealtime } from '@/hooks/use-realtime'
+import { Users, Clock, CalendarDays } from 'lucide-react'
 
 export default function Index() {
-  const { leads, consultants, currentUser } = useAppStore()
+  const [data, setData] = useState<any[]>([])
 
-  const me = consultants.find((c) => c.id === currentUser) || consultants[0]
-  const activeUserId = currentUser || me?.id
+  const loadData = async () => {
+    try {
+      const mData = await getMapeamentos()
+      setData(mData)
+    } catch {
+      /* intentionally ignored */
+    }
+  }
 
-  const isAgency = me?.role === 'Agência'
-  const isManager = me?.role === 'Gestora' || isAgency
+  useEffect(() => {
+    loadData()
+  }, [])
+  useRealtime('mapeamentos', () => {
+    loadData()
+  })
 
-  const visibleLeads = isAgency
-    ? leads
-    : isManager
-      ? leads.filter(
-          (l) =>
-            consultants.find((c) => c.id === l.consultantId)?.managerId === me?.id ||
-            l.consultantId === me?.id,
-        )
-      : leads.filter((l) => l.consultantId === activeUserId)
-
-  const totalSales = visibleLeads
-    .filter((l) => ['Fechado', 'Fechamento'].includes(l.status))
-    .reduce((sum, l) => sum + l.value, 0)
-  const inPipelineCount = visibleLeads.filter((l) =>
-    ['Cotação', 'Fechamento'].includes(l.status),
-  ).length
-
-  const now = new Date().getTime()
-
-  const expiringPoliciesLeads = visibleLeads.filter((l) =>
-    l.policies?.some((p) => {
-      const diff = new Date(p.expirationDate).getTime() - now
-      return diff > 0 && diff <= 30 * 24 * 60 * 60 * 1000
-    }),
-  )
-
-  const retentionAlerts = visibleLeads.filter(
-    (l) => now - new Date(l.lastContact).getTime() >= 90 * 24 * 60 * 60 * 1000,
-  )
+  const leads = data.filter((d) => d.type === 'Lead')
+  const clients = data.filter((d) => d.type === 'Cliente')
+  const expiring = data.filter((d) => {
+    if (!d.insurance_expiry) return false
+    const diff = new Date(d.insurance_expiry).getTime() - new Date().getTime()
+    return diff > 0 && diff <= 30 * 24 * 60 * 60 * 1000
+  })
 
   return (
     <div className="space-y-6">
-      <div className="flex items-center justify-between">
-        <div>
-          <h1 className="text-3xl font-bold tracking-tight">Dashboard Comercial</h1>
-          <p className="text-muted-foreground mt-1">
-            {isAgency
-              ? 'Visão global da agência'
-              : isManager
-                ? 'Visão da equipe'
-                : 'Sua performance pessoal (Minha Evolução)'}
-          </p>
-        </div>
+      <div>
+        <h1 className="text-3xl font-bold tracking-tight">Dashboard Comercial</h1>
+        <p className="text-muted-foreground mt-1">Visão geral dos seus Leads e Clientes.</p>
       </div>
 
-      {!isManager && me && (
-        <div className="grid gap-4 md:grid-cols-3 mb-6">
-          <Card>
-            <CardHeader className="pb-2">
-              <CardTitle className="text-sm font-medium">Meta de Ligações</CardTitle>
-            </CardHeader>
-            <CardContent>
-              <div className="flex justify-between mb-1">
-                <span className="text-2xl font-bold">{me.callsRealized}</span>
-                <span className="text-muted-foreground">/ {me.callsGoal}</span>
-              </div>
-              <Progress value={me.callsGoal > 0 ? (me.callsRealized / me.callsGoal) * 100 : 0} />
-            </CardContent>
-          </Card>
-          <Card>
-            <CardHeader className="pb-2">
-              <CardTitle className="text-sm font-medium">Meta de Visitas</CardTitle>
-            </CardHeader>
-            <CardContent>
-              <div className="flex justify-between mb-1">
-                <span className="text-2xl font-bold">{me.visitsRealized}</span>
-                <span className="text-muted-foreground">/ {me.visitsGoal}</span>
-              </div>
-              <Progress value={me.visitsGoal > 0 ? (me.visitsRealized / me.visitsGoal) * 100 : 0} />
-            </CardContent>
-          </Card>
-          <Card>
-            <CardHeader className="pb-2">
-              <CardTitle className="text-sm font-medium">Volume de Vendas</CardTitle>
-            </CardHeader>
-            <CardContent>
-              <div className="flex justify-between mb-1">
-                <span className="text-2xl font-bold text-success">
-                  {new Intl.NumberFormat('pt-BR', {
-                    style: 'currency',
-                    currency: 'BRL',
-                    maximumFractionDigits: 0,
-                  }).format(me.salesRealized)}
-                </span>
-                <span className="text-muted-foreground text-sm">
-                  /{' '}
-                  {new Intl.NumberFormat('pt-BR', {
-                    style: 'currency',
-                    currency: 'BRL',
-                    maximumFractionDigits: 0,
-                  }).format(me.salesGoal)}
-                </span>
-              </div>
-              <Progress value={me.salesGoal > 0 ? (me.salesRealized / me.salesGoal) * 100 : 0} />
-            </CardContent>
-          </Card>
-        </div>
-      )}
-
-      <div className="grid gap-4 md:grid-cols-4">
-        <Card className="hover:shadow-md transition-shadow">
-          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-            <CardTitle className="text-sm font-medium">Volume em Fechamento</CardTitle>
-            <DollarSign className="h-4 w-4 text-success" />
+      <div className="grid gap-4 md:grid-cols-3">
+        <Card>
+          <CardHeader className="flex flex-row items-center justify-between pb-2">
+            <CardTitle className="text-sm font-medium">Total de Leads</CardTitle>
+            <Clock className="h-4 w-4 text-muted-foreground" />
           </CardHeader>
           <CardContent>
-            <div className="text-2xl font-bold text-success">
-              {new Intl.NumberFormat('pt-BR', {
-                style: 'currency',
-                currency: 'BRL',
-                maximumFractionDigits: 0,
-              }).format(totalSales)}
-            </div>
-            <p className="text-xs text-muted-foreground mt-1">Negócios fechados ou na reta final</p>
+            <div className="text-2xl font-bold">{leads.length}</div>
           </CardContent>
         </Card>
-
-        <Card className="hover:shadow-md transition-shadow">
-          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-            <CardTitle className="text-sm font-medium">Pipeline Ativo</CardTitle>
-            <Clock className="h-4 w-4 text-accent" />
+        <Card>
+          <CardHeader className="flex flex-row items-center justify-between pb-2">
+            <CardTitle className="text-sm font-medium">Total de Clientes</CardTitle>
+            <Users className="h-4 w-4 text-muted-foreground" />
           </CardHeader>
           <CardContent>
-            <div className="text-2xl font-bold">{inPipelineCount} leads</div>
-            <p className="text-xs text-muted-foreground mt-1">Em fase de Cotação/Fechamento</p>
+            <div className="text-2xl font-bold">{clients.length}</div>
           </CardContent>
         </Card>
-
-        <Card className="hover:shadow-md transition-shadow border-amber-500/20">
-          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+        <Card>
+          <CardHeader className="flex flex-row items-center justify-between pb-2">
             <CardTitle className="text-sm font-medium text-amber-500">
               Renovações Próximas
             </CardTitle>
-            <AlertTriangle className="h-4 w-4 text-amber-500" />
+            <CalendarDays className="h-4 w-4 text-amber-500" />
           </CardHeader>
           <CardContent>
-            <div className="text-2xl font-bold text-amber-500">
-              {expiringPoliciesLeads.length} apólices
-            </div>
-            <p className="text-xs text-muted-foreground mt-1">Vencimento em menos de 30 dias</p>
-          </CardContent>
-        </Card>
-
-        <Card className="hover:shadow-md transition-shadow border-destructive/20">
-          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-            <CardTitle className="text-sm font-medium text-destructive">
-              Contatos Inativos
-            </CardTitle>
-            <AlertTriangle className="h-4 w-4 text-destructive" />
-          </CardHeader>
-          <CardContent>
-            <div className="text-2xl font-bold text-destructive">
-              {retentionAlerts.length} clientes
-            </div>
-            <p className="text-xs text-muted-foreground mt-1">Mais de 90 dias sem contato</p>
-          </CardContent>
-        </Card>
-      </div>
-
-      <div className="grid gap-6 md:grid-cols-2">
-        <Card>
-          <CardHeader className="flex flex-row items-center justify-between pb-2">
-            <div className="space-y-1">
-              <CardTitle>Alerta de Renovações</CardTitle>
-              <CardDescription>Apólices expirando em até 30 dias</CardDescription>
-            </div>
-          </CardHeader>
-          <CardContent>
-            <div className="space-y-4 mt-2">
-              {expiringPoliciesLeads.slice(0, 5).map((lead) => (
-                <div
-                  key={lead.id}
-                  className="flex items-center justify-between border-b pb-2 last:border-0 last:pb-0"
-                >
-                  <div>
-                    <p className="font-medium text-sm">{lead.name}</p>
-                    <p className="text-xs text-muted-foreground">{lead.branch}</p>
-                  </div>
-                  <Badge variant="outline" className="border-amber-500 text-amber-500">
-                    Ação Necessária
-                  </Badge>
-                </div>
-              ))}
-              {expiringPoliciesLeads.length === 0 && (
-                <p className="text-sm text-muted-foreground text-center py-4">
-                  Nenhuma apólice expirando próximo.
-                </p>
-              )}
-            </div>
-          </CardContent>
-        </Card>
-
-        <Card>
-          <CardHeader className="flex flex-row items-center justify-between pb-2">
-            <div className="space-y-1">
-              <CardTitle>Inatividade (+90 dias)</CardTitle>
-              <CardDescription>Oportunidades de reativação</CardDescription>
-            </div>
-            <Button variant="ghost" size="icon" asChild>
-              <Link to="/leads">
-                <ChevronRight className="h-5 w-5" />
-              </Link>
-            </Button>
-          </CardHeader>
-          <CardContent>
-            <div className="space-y-4 mt-2">
-              {retentionAlerts.slice(0, 5).map((alert) => (
-                <div
-                  key={alert.id}
-                  className="flex items-center justify-between border-b pb-2 last:border-0 last:pb-0"
-                >
-                  <div>
-                    <p className="font-medium text-sm">{alert.name}</p>
-                    <p className="text-xs text-muted-foreground">
-                      Últ. Contato: {new Date(alert.lastContact).toLocaleDateString('pt-BR')}
-                    </p>
-                  </div>
-                  <Badge variant="destructive" className="text-[10px]">
-                    Perigo de Base
-                  </Badge>
-                </div>
-              ))}
-              {retentionAlerts.length === 0 && (
-                <p className="text-sm text-muted-foreground text-center py-4">
-                  Nenhum alerta crítico no momento.
-                </p>
-              )}
-            </div>
+            <div className="text-2xl font-bold text-amber-500">{expiring.length}</div>
           </CardContent>
         </Card>
       </div>

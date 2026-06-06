@@ -1,6 +1,7 @@
 import React, { useState } from 'react'
 import { Outlet, Link, useLocation, Navigate } from 'react-router-dom'
 import useAppStore from '@/stores/useAppStore'
+import { useAuth } from '@/hooks/use-auth'
 import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover'
 import {
   SidebarProvider,
@@ -56,14 +57,13 @@ import { Button } from '@/components/ui/button'
 
 export function AppSidebar() {
   const location = useLocation()
-  const { consultants, currentUser, permissions } = useAppStore()
-  const me = consultants.find((c) => c.id === currentUser)
+  const { user } = useAuth()
 
-  const myPermissions = permissions[me?.role || 'Consultor']
+  const isManager = user?.role === 'manager'
 
   const navItems = [
     { name: 'Dashboard', path: '/', icon: LayoutDashboard, show: true },
-    { name: 'Leads & Clientes', path: '/leads', icon: Users, show: myPermissions.leads_tab },
+    { name: 'Leads & Clientes', path: '/leads', icon: Users, show: true },
     { name: 'Leads Disponíveis', path: '/available-leads', icon: Inbox, show: true },
     { name: 'Reativação (+90 dias)', path: '/reactivation', icon: History, show: true },
     { name: 'Metas & Evolução', path: '/goals', icon: Target, show: true },
@@ -73,16 +73,16 @@ export function AppSidebar() {
       name: 'Prospecção B2B (Scripts)',
       path: '/prospecting',
       icon: Telescope,
-      show: myPermissions.script_generator,
+      show: true,
     },
     { name: 'Especialista B2B', path: '/b2b-expert', icon: BriefcaseBusiness, show: true },
     { name: 'Mentor VIP', path: '/vip-mentor', icon: Sparkles, show: true },
-    { name: 'Relatórios', path: '/reports', icon: BarChart3, show: myPermissions.global_dashboard },
+    { name: 'Relatórios', path: '/reports', icon: BarChart3, show: isManager },
     {
       name: 'Gestão de Usuários',
       path: '/users',
       icon: ShieldCheck,
-      show: myPermissions.user_management,
+      show: isManager,
     },
   ].filter((item) => item.show)
 
@@ -124,8 +124,8 @@ export function AppSidebar() {
 }
 
 export default function Layout() {
-  const { consultants, currentUser, isAuthenticated, logout, reminders, updatePassword } =
-    useAppStore()
+  const { reminders } = useAppStore()
+  const { user, signOut } = useAuth()
   const { toast } = useToast()
 
   const [isPasswordDialogOpen, setIsPasswordDialogOpen] = useState(false)
@@ -133,19 +133,9 @@ export default function Layout() {
   const [newPassword, setNewPassword] = useState('')
   const [confirmNewPassword, setConfirmNewPassword] = useState('')
 
-  // Removed authentication wall to allow unrestricted access
-  const me = consultants.find((c) => c.id === currentUser) || consultants[0]
+  const me = user || { name: 'User', role: 'consultant' }
 
-  const handleUpdatePassword = () => {
-    if (!me) return
-    if (me.password && me.password !== currentPassword) {
-      toast({
-        title: 'Erro',
-        description: 'A senha atual está incorreta.',
-        variant: 'destructive',
-      })
-      return
-    }
+  const handleUpdatePassword = async () => {
     if (newPassword !== confirmNewPassword) {
       toast({
         title: 'Erro',
@@ -163,18 +153,24 @@ export default function Layout() {
       return
     }
 
-    updatePassword(me.id, newPassword)
-    toast({
-      title: 'Sucesso',
-      description: 'Senha alterada com sucesso.',
-    })
-    setIsPasswordDialogOpen(false)
-    setCurrentPassword('')
-    setNewPassword('')
-    setConfirmNewPassword('')
+    try {
+      const pb = (await import('@/lib/pocketbase/client')).default
+      await pb.collection('users').update(user.id, {
+        oldPassword: currentPassword,
+        password: newPassword,
+        passwordConfirm: newPassword,
+      })
+      toast({ title: 'Sucesso', description: 'Senha alterada com sucesso.' })
+      setIsPasswordDialogOpen(false)
+      setCurrentPassword('')
+      setNewPassword('')
+      setConfirmNewPassword('')
+    } catch (err: any) {
+      toast({ title: 'Erro', description: err.message, variant: 'destructive' })
+    }
   }
 
-  const activeUserId = currentUser || me?.id || ''
+  const activeUserId = user?.id || ''
   const myReminders =
     reminders?.filter((r) => r.userId === activeUserId && r.status === 'Pendente') || []
   const upcomingReminders = myReminders.filter((r) => {
@@ -260,7 +256,7 @@ export default function Layout() {
                     </DropdownMenuItem>
                     <DropdownMenuSeparator />
                     <DropdownMenuItem
-                      onClick={logout}
+                      onClick={signOut}
                       className="text-destructive focus:text-destructive focus:bg-destructive/10 cursor-pointer"
                     >
                       <LogOut className="mr-2 h-4 w-4" />
