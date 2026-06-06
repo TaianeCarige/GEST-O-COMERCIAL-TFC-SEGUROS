@@ -1,5 +1,5 @@
 {
-  "generatedAt": "2026-06-06T00:13:40.072Z",
+  "generatedAt": "2026-06-06T00:38:44.202Z",
   "collections": [
     {
       "name": "users",
@@ -131,12 +131,185 @@
           "required": false,
           "system": false,
           "autodateTriggers": ["onCreate", "onUpdate"]
+        },
+        {
+          "name": "gerente_carteira_id",
+          "type": "relation",
+          "required": false,
+          "system": false,
+          "collectionRef": "gerentes_carteira"
+        },
+        {
+          "name": "auto_expiry",
+          "type": "date",
+          "required": false,
+          "system": false
+        },
+        {
+          "name": "auto_carrier",
+          "type": "text",
+          "required": false,
+          "system": false
+        },
+        {
+          "name": "health_expiry",
+          "type": "date",
+          "required": false,
+          "system": false
+        },
+        {
+          "name": "health_carrier",
+          "type": "text",
+          "required": false,
+          "system": false
+        },
+        {
+          "name": "dental_expiry",
+          "type": "date",
+          "required": false,
+          "system": false
+        },
+        {
+          "name": "dental_carrier",
+          "type": "text",
+          "required": false,
+          "system": false
+        },
+        {
+          "name": "property_expiry",
+          "type": "date",
+          "required": false,
+          "system": false
+        },
+        {
+          "name": "property_carrier",
+          "type": "text",
+          "required": false,
+          "system": false
+        },
+        {
+          "name": "life_expiry",
+          "type": "date",
+          "required": false,
+          "system": false
+        },
+        {
+          "name": "life_carrier",
+          "type": "text",
+          "required": false,
+          "system": false
+        },
+        {
+          "name": "others_expiry",
+          "type": "date",
+          "required": false,
+          "system": false
+        },
+        {
+          "name": "others_carrier",
+          "type": "text",
+          "required": false,
+          "system": false
+        },
+        {
+          "name": "observations",
+          "type": "text",
+          "required": false,
+          "system": false
+        },
+        {
+          "name": "last_contact_by",
+          "type": "relation",
+          "required": false,
+          "system": false,
+          "collectionRef": "users"
+        },
+        {
+          "name": "last_contact_at",
+          "type": "date",
+          "required": false,
+          "system": false
         }
       ],
       "indexes": [
         "CREATE INDEX idx_mapeamentos_insurance_expiry ON mapeamentos (insurance_expiry)",
         "CREATE INDEX idx_mapeamentos_manager_id ON mapeamentos (manager_id)"
       ]
+    },
+    {
+      "name": "segmentos",
+      "type": "base",
+      "apiRules": {
+        "list": "@request.auth.id != ''",
+        "view": "@request.auth.id != ''",
+        "create": "@request.auth.id != ''",
+        "update": "@request.auth.id != ''",
+        "delete": "@request.auth.id != ''"
+      },
+      "fields": [
+        {
+          "name": "name",
+          "type": "text",
+          "required": true,
+          "system": false
+        },
+        {
+          "name": "created",
+          "type": "autodate",
+          "required": false,
+          "system": false,
+          "autodateTriggers": ["onCreate"]
+        },
+        {
+          "name": "updated",
+          "type": "autodate",
+          "required": false,
+          "system": false,
+          "autodateTriggers": ["onCreate", "onUpdate"]
+        }
+      ],
+      "indexes": []
+    },
+    {
+      "name": "gerentes_carteira",
+      "type": "base",
+      "apiRules": {
+        "list": "@request.auth.id != ''",
+        "view": "@request.auth.id != ''",
+        "create": "@request.auth.id != ''",
+        "update": "@request.auth.id != ''",
+        "delete": "@request.auth.id != ''"
+      },
+      "fields": [
+        {
+          "name": "name",
+          "type": "text",
+          "required": true,
+          "system": false
+        },
+        {
+          "name": "segmento_id",
+          "type": "relation",
+          "required": true,
+          "system": false,
+          "collectionRef": "segmentos"
+        },
+        {
+          "name": "created",
+          "type": "autodate",
+          "required": false,
+          "system": false,
+          "autodateTriggers": ["onCreate"]
+        },
+        {
+          "name": "updated",
+          "type": "autodate",
+          "required": false,
+          "system": false,
+          "autodateTriggers": ["onCreate", "onUpdate"]
+        }
+      ],
+      "indexes": []
     }
   ]
 }
