@@ -76,7 +76,7 @@ export function LeadsTable({ gerenteId }: { gerenteId: string }) {
             <TableRow>
               <TableHead>Nome</TableHead>
               <TableHead>Email</TableHead>
-              <TableHead>Tipo</TableHead>
+              <TableHead>Status</TableHead>
               <TableHead>Último Contato</TableHead>
               <TableHead className="text-right">Ações</TableHead>
             </TableRow>
@@ -86,7 +86,11 @@ export function LeadsTable({ gerenteId }: { gerenteId: string }) {
               <TableRow key={item.id}>
                 <TableCell className="font-medium">{item.name}</TableCell>
                 <TableCell>{item.email}</TableCell>
-                <TableCell>{item.type}</TableCell>
+                <TableCell>
+                  <span className="inline-flex items-center px-2 py-0.5 rounded text-xs font-medium bg-secondary">
+                    {item.status || item.type}
+                  </span>
+                </TableCell>
                 <TableCell>
                   {item.last_contact_at ? (
                     <div className="text-xs">

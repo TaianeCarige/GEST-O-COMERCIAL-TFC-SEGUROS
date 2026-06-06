@@ -29,6 +29,8 @@ const initialForm = {
   phone: '',
   type: 'Lead',
   manager_id: '',
+  status: 'Lead',
+  value: 0,
   auto_expiry: '',
   auto_carrier: '',
   health_expiry: '',
@@ -181,6 +183,29 @@ export function ClientModal({
                     <SelectItem value="Cliente">Cliente</SelectItem>
                   </SelectContent>
                 </Select>
+              </div>
+              <div className="space-y-1">
+                <Label>Status da Negociação</Label>
+                <Select value={form.status} onValueChange={(v) => setForm({ ...form, status: v })}>
+                  <SelectTrigger>
+                    <SelectValue />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="Lead">Lead</SelectItem>
+                    <SelectItem value="Cotação">Cotação</SelectItem>
+                    <SelectItem value="Provável">Provável</SelectItem>
+                    <SelectItem value="Frio">Frio</SelectItem>
+                    <SelectItem value="Fechado">Fechado</SelectItem>
+                  </SelectContent>
+                </Select>
+              </div>
+              <div className="space-y-1">
+                <Label>Valor Estimado (R$)</Label>
+                <Input
+                  type="number"
+                  value={form.value}
+                  onChange={(e) => setForm({ ...form, value: Number(e.target.value) })}
+                />
               </div>
               <div className="space-y-1 col-span-2">
                 <Label>Consultor Associado</Label>

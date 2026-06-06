@@ -22,6 +22,9 @@ import B2BExpert from './pages/B2BExpert'
 import ScriptGenerator from './pages/ScriptGenerator'
 import Prospecting from './pages/Prospecting'
 import Reports from './pages/Reports'
+import ObjectionSolver from './pages/ObjectionSolver'
+import MasterDashboard from './pages/MasterDashboard'
+import TeamActivity from './pages/TeamActivity'
 import NotFound from './pages/NotFound'
 import AvailableLeads from './pages/AvailableLeads'
 import Reactivation from './pages/Reactivation'
@@ -57,6 +60,9 @@ const App = () => (
               <Route path="/vip-mentor" element={<VIPMentor />} />
               <Route path="/prospecting" element={<Prospecting />} />
               <Route path="/reports" element={<Reports />} />
+              <Route path="/objection-solver" element={<ObjectionSolver />} />
+              <Route path="/master-dashboard" element={<MasterDashboard />} />
+              <Route path="/team-activity" element={<TeamActivity />} />
               <Route path="/users" element={<Users />} />
             </Route>
             <Route path="*" element={<NotFound />} />

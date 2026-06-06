@@ -1,5 +1,5 @@
 {
-  "generatedAt": "2026-06-06T00:51:41.399Z",
+  "generatedAt": "2026-06-06T01:04:10.923Z",
   "collections": [
     {
       "name": "users",
@@ -56,6 +56,18 @@
           "type": "number",
           "required": false,
           "system": false
+        },
+        {
+          "name": "callsGoal",
+          "type": "number",
+          "required": false,
+          "system": false
+        },
+        {
+          "name": "visitsGoal",
+          "type": "number",
+          "required": false,
+          "system": false
         }
       ],
       "indexes": [
@@ -67,8 +79,8 @@
       "name": "mapeamentos",
       "type": "base",
       "apiRules": {
-        "list": "@request.auth.id != '' && (manager_id = @request.auth.id || @request.auth.role = 'manager')",
-        "view": "@request.auth.id != '' && (manager_id = @request.auth.id || @request.auth.role = 'manager')",
+        "list": "@request.auth.id != ''",
+        "view": "@request.auth.id != ''",
         "create": "@request.auth.id != ''",
         "update": "@request.auth.id != '' && (manager_id = @request.auth.id || @request.auth.role = 'manager')",
         "delete": "@request.auth.role = 'manager'"
@@ -227,6 +239,12 @@
         {
           "name": "last_contact_at",
           "type": "date",
+          "required": false,
+          "system": false
+        },
+        {
+          "name": "value",
+          "type": "number",
           "required": false,
           "system": false
         }
