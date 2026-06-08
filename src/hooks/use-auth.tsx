@@ -25,18 +25,36 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
 
   useEffect(() => {
     const unsubscribe = pb.authStore.onChange((_token, record) => {
+      if (record && record.active === false) {
+        pb.authStore.clear()
+        setUser(null)
+        setIsAuthenticated(false)
+        return
+      }
       setUser(pb.authStore.isValid ? record : null)
       setIsAuthenticated(pb.authStore.isValid)
     })
+
     if (pb.authStore.isValid) {
-      pb.collection('users')
-        .authRefresh()
-        .catch(() => pb.authStore.clear())
-        .finally(() => setLoading(false))
+      if (pb.authStore.record && pb.authStore.record.active === false) {
+        pb.authStore.clear()
+        setLoading(false)
+      } else {
+        pb.collection('users')
+          .authRefresh()
+          .then((authData) => {
+            if (authData.record.active === false) {
+              pb.authStore.clear()
+            }
+          })
+          .catch(() => pb.authStore.clear())
+          .finally(() => setLoading(false))
+      }
     } else {
       if (pb.authStore.record) pb.authStore.clear()
       setLoading(false)
     }
+
     return () => {
       unsubscribe()
     }
@@ -61,7 +79,11 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
 
   const signIn = async (email: string, password: string) => {
     try {
-      await pb.collection('users').authWithPassword(email, password)
+      const authData = await pb.collection('users').authWithPassword(email, password)
+      if (authData.record.active === false) {
+        pb.authStore.clear()
+        return { error: new Error('Conta inativa. Entre em contato com o administrador.') }
+      }
       return { error: null }
     } catch (error) {
       return { error }

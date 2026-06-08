@@ -13,7 +13,7 @@ import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
 import { Button } from '@/components/ui/button'
 import { useToast } from '@/hooks/use-toast'
-import { ShieldCheck, UserPlus, LogIn } from 'lucide-react'
+import { ShieldCheck, UserPlus, LogIn, Loader2 } from 'lucide-react'
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs'
 
 export default function Login() {
@@ -24,22 +24,32 @@ export default function Login() {
   // Login State
   const [loginEmail, setLoginEmail] = useState('')
   const [loginPassword, setLoginPassword] = useState('')
+  const [isLoggingIn, setIsLoggingIn] = useState(false)
 
   // Register State
   const [regName, setRegName] = useState('')
   const [regEmail, setRegEmail] = useState('')
   const [regPassword, setRegPassword] = useState('')
   const [regConfirmPassword, setRegConfirmPassword] = useState('')
+  const [isRegistering, setIsRegistering] = useState(false)
 
   const handleLogin = async (e: React.FormEvent) => {
     e.preventDefault()
+    setIsLoggingIn(true)
     const { error } = await signIn(loginEmail, loginPassword)
+    setIsLoggingIn(false)
     if (!error) {
       navigate('/')
     } else {
+      let description = 'E-mail ou senha incorretos'
+      if (error instanceof Error && error.message.includes('Conta inativa')) {
+        description = error.message
+      } else if ((error as any)?.message?.includes('Conta inativa')) {
+        description = (error as any).message
+      }
       toast({
         title: 'Erro de autenticação',
-        description: error.message || 'E-mail ou senha incorretos.',
+        description,
         variant: 'destructive',
       })
     }
@@ -64,7 +74,9 @@ export default function Login() {
       return
     }
 
+    setIsRegistering(true)
     const { error } = await signUp(regEmail, regPassword, regName)
+    setIsRegistering(false)
     if (!error) {
       toast({
         title: 'Cadastro realizado',
@@ -74,7 +86,7 @@ export default function Login() {
     } else {
       toast({
         title: 'Erro no cadastro',
-        description: error.message || 'Ocorreu um erro no cadastro.',
+        description: (error as any)?.message || 'Ocorreu um erro no cadastro.',
         variant: 'destructive',
       })
     }
@@ -145,8 +157,9 @@ export default function Login() {
                 </div>
               </CardContent>
               <CardFooter>
-                <Button type="submit" className="w-full h-11">
-                  Entrar
+                <Button type="submit" className="w-full h-11" disabled={isLoggingIn}>
+                  {isLoggingIn ? <Loader2 className="w-4 h-4 mr-2 animate-spin" /> : null}
+                  {isLoggingIn ? 'Entrando...' : 'Entrar'}
                 </Button>
               </CardFooter>
             </form>
@@ -202,8 +215,9 @@ export default function Login() {
                 </div>
               </CardContent>
               <CardFooter>
-                <Button type="submit" className="w-full h-11">
-                  Criar Conta
+                <Button type="submit" className="w-full h-11" disabled={isRegistering}>
+                  {isRegistering ? <Loader2 className="w-4 h-4 mr-2 animate-spin" /> : null}
+                  {isRegistering ? 'Criando Conta...' : 'Criar Conta'}
                 </Button>
               </CardFooter>
             </form>
